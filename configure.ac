@@ -5,6 +5,7 @@ AC_INIT(
 	[https://github.com/dsamarin/lively/issues],
 	[lively],
 	[https://dsamar.in/lively/])
+AM_INIT_AUTOMAKE
 
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -28,5 +29,5 @@ esac
 AM_CONDITIONAL(PLATFORM_LINUX, test "$platform_linux" = "yes")
 AM_CONDITIONAL(PLATFORM_WINDOWS, test "$platform_windows" = "yes")
 
-AC_CONFIG_FILES([Makefile, src/Makefile, src/linux/Makefile, src/windows/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/linux/Makefile src/windows/Makefile])
 AC_OUTPUT
