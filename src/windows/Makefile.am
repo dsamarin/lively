@@ -1,1 +1,3 @@
-platform_SOURCES = sources.c utils.c
+noinst_LIBRARIES = libplatform.a
+
+libplatform_a_SOURCES = signals.c utils.c

@@ -8,26 +8,26 @@ AC_INIT(
 AM_INIT_AUTOMAKE
 
 AC_CONFIG_SRCDIR([src/main.c])
-AC_CONFIG_HEADERS([config.h])
 
 AC_CANONICAL_HOST
 
 AC_PROG_CC
+AC_PROG_RANLIB
 
-AC_MSG_CHECKING([for some Windows platform])
+PLATFORM=
+PLATFORM_LIST="windows linux"
+AC_MSG_CHECKING([platform])
 case "$host" in
 	*-*-mingw*|*-*-cygwin*)
-		platform_windows=yes
-		platform_linux=no
+		PLATFORM="windows"
 		;;
 	*)
-		platform_windows=no
-		platform_linux=yes
+		PLATFORM="linux"
 		;;
 esac
-
-AM_CONDITIONAL(PLATFORM_LINUX, test "$platform_linux" = "yes")
-AM_CONDITIONAL(PLATFORM_WINDOWS, test "$platform_windows" = "yes")
+AC_MSG_RESULT([$PLATFORM])
+AC_SUBST([PLATFORM])
+AC_SUBST([PLATFORM_LIST])
 
 AC_CONFIG_FILES([Makefile src/Makefile src/linux/Makefile src/windows/Makefile])
 AC_OUTPUT

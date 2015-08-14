@@ -1,22 +1,13 @@
-CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Os
-LDFLAGS = 
+AM_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Os
+AM_LDFLAGS = 
 
-MODULES = lively_app.c
-MODULES_HEADER = $(MODULES:.c=.h)
-
-if PLATFORM_WINDOWS
-	MAYBE_WINDOWS = windows
-	lively_LDADD += windows/platform.o
-	lively_DEPENDENCIES = windows/platform.o
-endif
-if PLATFORM_LINUX
-	MAYBE_LINUX = linux
-	lively_LD += linux/platform.o
-	lively_DEPENDENCIES = linux/platform.o
-endif
-
-SUBDIRS = $(MAYBE_LINUX) $(MAYBE_WINDOWS)
+SUBDIRS = $(PLATFORM)
+DIST_SUBDIRS = $(PLATFORM_LIST)
 
 bin_PROGRAMS = lively
 
-lively_SOURCES = main.c platform.h $(MODULES) $(MODULES_HEADER)
+lively_SOURCES = main.c \
+	lively_app.c \
+	lively_app.h
+lively_LDADD = $(PLATFORM)/libplatform.a
+lively_DEPENDENCIES = $(PLATFORM)/libplatform.a
