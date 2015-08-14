@@ -14,6 +14,12 @@ AC_CANONICAL_HOST
 AC_PROG_CC
 AC_PROG_RANLIB
 
+# Doxygen setup
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
+AM_COND_IF([HAVE_DOXYGEN], [AC_CONFIG_FILES([doc/Makefile doc/Doxyfile])])
+
+# Platform setup
 PLATFORM=
 PLATFORM_LIST="windows linux"
 AC_MSG_CHECKING([platform])
