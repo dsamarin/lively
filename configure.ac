@@ -5,6 +5,7 @@ AC_INIT(
 	[https://github.com/dsamarin/lively/issues],
 	[lively],
 	[https://dsamar.in/lively/])
+AC_SUBST([PACKAGE_BRIEF], ['Lively is an open-source application for live mixing and effects processing.'])
 AM_INIT_AUTOMAKE
 
 AC_CONFIG_SRCDIR([src/main.c])
