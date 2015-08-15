@@ -35,6 +35,10 @@ void lively_app_destroy (lively_app_t *app) {
 	lively_audio_destroy (&app->audio);
 }
 void lively_app_run (lively_app_t *app) {
+	if (app->running) {
+		return;
+	}
+
 	lively_app_log (app, LIVELY_INFO, "main", "Running lively");
 
 	if (lively_audio_start (&app->audio)) {
@@ -44,12 +48,14 @@ void lively_app_run (lively_app_t *app) {
 	}
 }
 void lively_app_stop (lively_app_t *app) {
+	if (!app->running) {
+		return;
+	}
+
 	lively_app_log (app, LIVELY_INFO, "main", "Stopping lively");
 
-	if (app->running) {
-		app->running = false;
-		lively_audio_stop (&app->audio);
-	}
+	app->running = false;
+	lively_audio_stop (&app->audio);
 }
 
 void lively_app_log (lively_app_t *app, enum lively_log_level level, const char *group, const char *fmt, ...) {
