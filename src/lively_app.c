@@ -26,8 +26,6 @@ bool lively_app_init (lively_app_t *app) {
 	return true;
 }
 void lively_app_destroy (lively_app_t *app) {
-	lively_app_log (app, LIVELY_INFO, "main", "Stopping lively");
-
 	if (app->running) {
 		lively_app_stop (app);
 	}
@@ -93,7 +91,7 @@ void lively_app_log (lively_app_t *app, enum lively_log_level level, const char 
 		break;
 	}
 
-	fprintf (out, "lively:%s \x1b[%dm%s\x1b[0m ", group, color, level_text);
+	fprintf (out, "lively:%s \x1b[%d;1m%s\x1b[0m ", group, color, level_text);
 
 	va_start (args, fmt);
 	vfprintf (out, fmt, args);
