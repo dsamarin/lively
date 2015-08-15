@@ -1,2 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = src doc
+
+if HAVE_DOXYGEN
+	MAYBE_DOXYGEN = doc
+endif
+SUBDIRS = src $(MAYBE_DOXYGEN)
