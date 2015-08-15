@@ -1,3 +1,8 @@
+/**
+ * @file main.c
+ * @brief Contains the main entry point of lively.
+ **/
+
 #include <stdlib.h>
 
 #include "platform.h"
@@ -10,11 +15,22 @@ static void shutdown (void) {
 	exit (0);
 }
 
+/**
+* @brief The main entry point of lively.
+*
+* Initializes and runs a new Lively Application into a static
+* variable with file scope. This way, upon receiving the
+* signal to quit by the user, we can clean up.
+*
+* @return Success value 
+*/
 int main(void) {
 	platform_register_exit (&shutdown);
 
-	lively_app_init (&lively);
-	lively_app_run (&lively);
-	lively_app_destroy (&lively);
+	if (lively_app_init (&lively)) {
+		lively_app_run (&lively);
+		lively_app_destroy (&lively);
+	}
+
 	return 0;
 }

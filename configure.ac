@@ -1,3 +1,4 @@
+# Initialization
 AC_PREREQ([2.69])
 AC_INIT(
 	[Lively],
@@ -12,8 +13,12 @@ AC_CONFIG_SRCDIR([src/main.c])
 
 AC_CANONICAL_HOST
 
+# Checks for programs
 AC_PROG_CC
 AC_PROG_RANLIB
+
+# Checks for libraries
+AC_CHECK_LIB([jack], [jack_client_open])
 
 # Doxygen setup
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
@@ -35,6 +40,13 @@ esac
 AC_MSG_RESULT([$PLATFORM])
 AC_SUBST([PLATFORM])
 AC_SUBST([PLATFORM_LIST])
+
+# Checks for header files
+AC_CHECK_HEADERS([stdlib.h])
+
+AC_CHECK_HEADER_STDBOOL
+
+#
 
 AC_CONFIG_FILES([Makefile src/Makefile src/linux/Makefile src/windows/Makefile])
 AC_OUTPUT
