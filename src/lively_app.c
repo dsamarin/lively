@@ -56,60 +56,75 @@ void lively_app_stop (lively_app_t *app) {
 	lively_audio_stop (&app->audio);
 }
 
-void lively_app_log (lively_app_t *app, enum lively_log_level level, const char *group, const char *fmt, ...) {
-	FILE *out = stdout;
+/**
+* @brief Logs an event that pertains to Lively. 
+*
+* This function will print the message to the standard output
+* file stream for non-error messages and to the standard error file
+* stream for error messages. Error messages are defined by levels of
+* #LIVELY_ERROR and #LIVELY_FATAL.
+*
+* #LIVELY_FATAL messages will also trigger a clean shutdown of the
+* Lively application. If during a clean shutdown, and this level is used,
+* the application will force-quit to prevent any recursion loops.
+*
+* The message format is as follows: 
+* <code>
+* lively:<group> <level> <message>
+* </code>
+*
+* @param app A reference to the currently running application
+* @param level The type of message this is
+* @param group The module within Lively that generated the message
+* @param fmt A printf-style format string
+* @param ...
+*/
+void lively_app_log (
+	lively_app_t *app,
+	enum lively_log_level level,
+	const char *group,
+	const char *fmt, ...) {
+
 	va_list args;
-	int color = 0;
-	const char *level_text;
 
-	switch (level) {
-	case LIVELY_TRACE:
-		level_text = "trace";
-		color = 36; // cyan
-		break;
-	case LIVELY_DEBUG:
-		level_text = "debug";
-		color = 36; // cyan
-		break;
-	case LIVELY_INFO:
-		level_text = "info";
-		color = 34; // blue
-		break;
-	case LIVELY_WARN:
-		level_text = "warning";
-		color = 33; // yellow
-		break;
-	case LIVELY_ERROR:
-		level_text = "error";
-		color = 31; // red;
-		out = stderr;
-		break;
-	case LIVELY_FATAL:
-		level_text = "fatal";
-		color = 31; // red
-		out = stderr;
-		break;
-	}
+	static const struct {
+		FILE** file;
+		const char *name;
+		int color;
+	} options[] = {
+		[LIVELY_TRACE] = {&stdout, "trace", 36 /* cyan */},
+		[LIVELY_DEBUG] = {&stdout, "debug", 36 /* cyan */},
+		[LIVELY_INFO]  = {&stdout, "info",  34 /* blue */},
+		[LIVELY_WARN]  = {&stdout, "warning", 33 /* yellow */},
+		[LIVELY_ERROR] = {&stderr, "error", 31 /* red */},
+		[LIVELY_FATAL] = {&stderr, "fatal", 31 /* red */},
+	};
 
-	fprintf (out, "lively:%s \x1b[%d;1m%s\x1b[0m ", group, color, level_text);
+	fprintf (*options[level].file,
+		"lively:%s \x1b[%d;1m%s\x1b[0m ",
+		group,
+		options[level].color,
+		options[level].name);
 
 	va_start (args, fmt);
-	vfprintf (out, fmt, args);
+	vfprintf (*options[level].file, fmt, args);
 	va_end (args);
 
 	putchar ('\n');
 
-	// If we had a fatal error, we need to shutdown immediately.
-	// Let's try to do it cleanly.
-	static bool fatal = false;
+	// If we have a fatal error, we should shutdown cleanly.
+	// Except when we are called twice, we shutdown immediately.
 	if (level == LIVELY_FATAL) {
-		if (fatal) {
+		static bool seen = false;
+		if (seen) {
 			// We have already had a fatal error.
 			// Forceful shutdown.
+			fprintf (stderr, "lively: forced shutdown\n");
 			exit (1);
+		} else {
+			seen = true;
+			// Attempt to destroy what has been initialized.
+			lively_app_destroy (app);
 		}
-		fatal = true;
-		// Attempt to destroy what has been initialized.
-		lively_app_destroy (app);
 	}
 }
