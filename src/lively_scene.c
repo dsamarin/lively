@@ -1,9 +1,20 @@
+/**
+ * @file lively_scene.c
+ * Lively Scene: A graph structure for Lively Nodes.
+ */
+
 #include <stdlib.h>
 
 #include "lively_app.h"
 #include "lively_scene.h"
 #include "lively_node.h"
 
+/**
+* Initializes a new Lively Scene
+*
+* @param scene The pointer to the scene memory to initialize
+* @param app Reference to the currently running Lively App
+*/
 void
 lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 	scene->app = app;
@@ -11,6 +22,14 @@ lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 	scene->name = "scene000";
 }
 
+/**
+* Destroys a Lively Scene by cleaning up memory
+*
+* This function cleans up memory by disconnecting all plugs from each 
+* Lively Node. The caller is responsible for cleaning up Lively Nodes.
+*
+* @param scene
+*/
 void
 lively_scene_destroy(lively_scene_t *scene) {
 	lively_node_t *node_iterator = scene->head;
@@ -20,6 +39,13 @@ lively_scene_destroy(lively_scene_t *scene) {
 	}
 }
 
+/**
+* Calls the callback specified for each Lively Node in the Lively Scene
+*
+* @param scene The Lively Scene
+* @param callback The callback to call
+* @param data User-supplied data
+*/
 void
 lively_scene_nodes_foreach(
 	lively_scene_t *scene,
@@ -33,6 +59,12 @@ lively_scene_nodes_foreach(
 	}
 }
 
+/**
+* Adds a Lively Node to the Lively Scene
+*
+* @param scene The Lively Scene
+* @param node The Lively Node
+*/
 void
 lively_scene_add_node(lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t *head = scene->head;
@@ -40,6 +72,15 @@ lively_scene_add_node(lively_scene_t *scene, lively_node_t *node) {
 	node->next = head;
 }
 
+/**
+* Removes a Lively Node from the Lively Scene
+*
+* This function will produce a warning if the Lively Node doesn’t belong
+* to the Lively Scene.
+*
+* @param scene The Lively Scene
+* @param node The Lively Node
+*/
 void
 lively_scene_remove_node(lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t **iterator = &scene->head;
@@ -63,6 +104,12 @@ lively_scene_remove_node(lively_scene_t *scene, lively_node_t *node) {
 		scene->name);
 }
 
+/**
+* Disconnects all plugs to and from the specified Lively Node
+*
+* @param scene The Lively Scene which contains the Lively Node
+* @param node The Lively Node
+*/
 void
 lively_scene_disconnect_node (lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t *node_iterator = scene->head;
@@ -104,6 +151,17 @@ scene_find_plug (
 	return NULL;
 }
 
+/**
+* Returns true if the plug specified exists in the Lively Scene
+*
+* @param scene The Lively Scene
+* @param source The source node
+* @param source_ch The source channel
+* @param target The target node
+* @param target_ch The target channel
+*
+* @return 
+*/
 bool
 lively_scene_is_connected (
 	lively_scene_t *scene,
@@ -116,6 +174,18 @@ lively_scene_is_connected (
 		scene, source, source_ch, target, target_ch) != NULL;
 }
 
+/**
+* Creates a plug from the source to the target
+*
+* This function will produce #LIVELY_WARN if the plug already exists,
+* or a #LIVELY_FATAL if memory could not be allocated for the plug.
+*
+* @param scene The Lively Scene
+* @param source The source node
+* @param source_ch The source channel
+* @param target The target node
+* @param target_ch The target channel
+*/
 void
 lively_scene_connect(
 	lively_scene_t *scene,
@@ -159,6 +229,18 @@ lively_scene_connect(
 	plug->next = head;
 }
 
+/**
+* Removes a plug from the source to the target
+*
+* This function will produce #LIVELY_WARN if the plug doesn’t already exist.
+*
+* @param scene The Lively Scene
+* @param source The source node
+* @param source_ch The source channel
+* @param target The target node
+* @param target_ch The target channel
+*/
+
 void
 lively_scene_disconnect(
 	lively_scene_t *scene,
@@ -181,7 +263,6 @@ lively_scene_disconnect(
 	}
 
 	lively_node_plug_t *next = (*plug)->next;
+	free (*plug);
 	*plug = next;
-
-	free (plug);
 }

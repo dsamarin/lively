@@ -5,10 +5,13 @@
 
 struct lively_node;
 
+/**
+ * Specifies a named channel on a Lively Node
+ */
 typedef enum lively_node_channel {
-	LIVELY_MONO,
-	LIVELY_LEFT,
-	LIVELY_RIGHT
+	LIVELY_MONO, /**< The main mono channel */
+	LIVELY_LEFT, /**< The main stereo left channel */
+	LIVELY_RIGHT /**< The main stereo right channel */
 } lively_node_channel_t;
 
 typedef struct lively_node_plug {

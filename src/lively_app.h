@@ -8,7 +8,7 @@ typedef struct lively_app lively_app_t;
 #include "lively_audio.h"
 
 /**
- * @brief Specifies the level used for logging messages within lively.
+ * Specifies the level used for logging messages within lively.
  */
 enum lively_log_level {
 

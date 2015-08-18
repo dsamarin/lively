@@ -1,10 +1,6 @@
 @import url(//fonts.googleapis.com/css?family=Roboto:400,700|PT+Mono);
 
 /* General */
-* {
-	margin: 0;
-	padding: 0;
-}
 a { color: white; text-decoration: none; }
 a:hover {text-decoration: underline; }
 
@@ -12,11 +8,13 @@ body {
 	background: #30293D;
 	color: #A397BA;
 	font: 400 12pt/125% Roboto, sans-serif;
+	margin: 0;
+	padding: 0;
 }
 
 /* Header */
 #titlearea {
-	background: #160F24;
+	background: #2F2640;
 	text-align: center;
 	padding: 1em 0;
 }
@@ -31,6 +29,7 @@ h1 {
 	font-weight: normal;
 	line-height: 125%;
 	color: white;
+	margin: 0;
 }
 #projectnumber { font-size: 10pt; }
 
@@ -38,12 +37,16 @@ h1 {
 .tabs {
 	background: #120C1D;
 }
+.tabs, tabs2 {
+	box-shadow: 0 3px 8px #0B0812 inset;
+}
 .tablist {
 	margin: 0 auto;
 	width: 960px;
 	list-style: none;
 	clear: left;
 	overflow: hidden;
+	padding: 0;
 }
 .tablist li {
 	float: left;
@@ -55,7 +58,7 @@ h1 {
 	text-decoration: none;
 }
 .tablist li a:hover, .tablist li.current a {
-	background: #160F24;
+	background: #2F2640;
 	color: white;
 
 }
@@ -77,12 +80,52 @@ h1 {
 .navpath { display: none; }
 
 /* Page */
-.header, .contents { padding: 0 0.5em; }
-.title { font-size: 2em; color: white; margin: 0.5em 0; }
+.header, .contents {
+	padding-top: 1em;
+	width: 960px;
+	margin: 0 auto;
+}
+.contents p {
+	margin-bottom: 1em;
+}
+.title { font-size: 2em; line-height: initial; color: white; }
 
 /* Page headers */
 h2.groupheader {
 	margin: 0.25em 0 0.5em;
+}
+
+table.memberdecls {
+    font-family: PT Mono, monospace;
+    padding: 1em;
+}
+
+table.memberdecls tr.heading {
+    display: none;
+}
+
+td.mdescRight {
+    font-style: italic;
+}
+
+dt { color: white; }
+
+td.paramname {
+    color: white;
+    font-family: PT Mono;
+}
+.memitem {
+    background-color: #171221;
+	padding-bottom: 1em;
+    margin-bottom: 1em;
+}
+.memproto {
+    background-color: black;
+    padding: 1em;
+    font-family: PT Mono, monospace;
+}
+.memdoc {
+    margin: 1em;
 }
 
 /* Footer */
@@ -94,6 +137,7 @@ h2.groupheader {
 /* Code */
 .fragment {
 	font: 10pt PT Mono, monospace;
+	margin: 1em 0;
 }
 .fragment a {
 	color: inherit;
@@ -120,3 +164,4 @@ div.line {
 .charliteral { color: #FF8700; }
 .comment { color: #808080; }
 .preprocessor { color: #D8DBB3; }
+.ttc { display: none; }

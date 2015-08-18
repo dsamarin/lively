@@ -1,6 +1,6 @@
 /**
  * @file lively_app.c
- * @brief Lively Application: Manages the application lifecycle
+ * Lively Application: Manages the application lifecycle
  */
 
 #include <stdio.h>
@@ -57,7 +57,7 @@ void lively_app_stop (lively_app_t *app) {
 }
 
 /**
-* @brief Logs an event that pertains to Lively. 
+* Logs an event that pertains to Lively. 
 *
 * This function will print the message to the standard output
 * file stream for non-error messages and to the standard error file

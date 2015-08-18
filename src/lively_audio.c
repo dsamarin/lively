@@ -1,6 +1,6 @@
 /**
  * @file lively_audio.c
- * @brief Lively Audio: Manages audio interface with driver
+ * Lively Audio: Manages audio interface with driver
  */
 
 #include <stdlib.h>

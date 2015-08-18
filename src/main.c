@@ -1,6 +1,6 @@
 /**
  * @file main.c
- * @brief Contains the main entry point of lively.
+ * Contains the main entry point of lively.
  **/
 
 #include <stdlib.h>
@@ -16,7 +16,7 @@ static void shutdown (void) {
 }
 
 /**
-* @brief The main entry point of lively.
+* The main entry point of lively.
 *
 * Initializes and runs a new Lively Application into a static
 * variable with file scope. This way, upon receiving the
