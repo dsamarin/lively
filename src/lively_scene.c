@@ -2,91 +2,129 @@
 
 #include "lively_app.h"
 #include "lively_scene.h"
-#include "lively_scene_node.h"
+#include "lively_node.h"
 
 void
 lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
-	scene->nodes = NULL;
-}
-
-lively_scene_node_t *
-lively_scene_list_nodes(lively_scene_t *scene) {
-	return scene->nodes;
+	scene->app = app;
+	scene->head = NULL;
+	scene->name = "scene000";
 }
 
 void
-lively_scene_add_node(lively_scene_t *scene, lively_scene_node_t *node) {
-	// We push the node onto the nodes list as a doubly-linked list
-	lively_scene_node_t *first = scene->nodes;
-	scene->nodes = node;
-	node->next = first;
+lively_scene_nodes_foreach(
+	lively_scene_t *scene,
+	void (*callback) (lively_scene_t *scene, lively_node_t *node, void *data),
+	void *data) {
+
+	lively_node_t *node = scene->head;
+	while (node) {
+		callback (scene, node, data);
+		node = node->next;
+	}
 }
 
-bool
-lively_scene_remove_node(lively_scene_t *scene, lively_scene_node_t *node) {
-	lively_scene_node_t *current = scene->nodes;
+void
+lively_scene_add_node(lively_scene_t *scene, lively_node_t *node) {
+	lively_node_t *head = scene->head;
+	scene->head = node;
+	node->next = head;
+}
 
-	if (current == node) {
-		scene->nodes = node->next;
-		return true;
-	}
+void
+lively_scene_remove_node(lively_scene_t *scene, lively_node_t *node) {
+	lively_node_t **iterator = &scene->head;
+	while (*iterator) {
+		if (*iterator == node) {
+			lively_scene_disconnect_node (scene, node);
 
-	while (current) {
-		if (current->next == node) {
-			current->next = node->next;
-			return true;
+			lively_node_t *next = (*iterator)->next;
+			*iterator = next;
+			return;
 		}
-		current = current->next;
+		iterator = &(*iterator)->next;
 	}
 
 	lively_app_log (
 		scene->app,
 		LIVELY_WARN,
 		"scene",
-		"Attempted to remove node from scene that is not part of the scene.");
-
-	return false;
+		"Attempt to remove non-existant node '%s' from scene '%s'",
+		node->name,
+		scene->name);
 }
 
-static inline bool
-is_matching_scene_node_plug (
-	lively_scene_node_plug_t *plug,
-	lively_scene_node_t *source,
-	lively_scene_node_port_t source_port,
-	lively_scene_node_t *target,
-	lively_scene_node_port_t target_port) {
+void
+lively_scene_disconnect_node (lively_scene_t *scene, lively_node_t *node) {
+	lively_node_t *node_iterator = scene->head;
+	while (node_iterator) {
+		lively_node_plug_t *plug_iterator = node_iterator->plugs;
+		while (plug_iterator) {
+			lively_node_plug_t *plug_iterator_next = plug_iterator->next;
+			free (plug_iterator);
+			plug_iterator = plug_iterator_next;
+		}
+		node_iterator->plugs = NULL;
+		node_iterator = node_iterator->next;
+	}
+}
 
-	return (plug->source == source &&
-		plug->target == target &&
-		plug->source_port == source_port &&
-		plug->target_port == target_port);
+static lively_node_plug_t **
+scene_find_plug (
+	lively_scene_t *scene,
+	lively_node_t *source,
+	lively_node_channel_t source_ch,
+	lively_node_t *target,
+	lively_node_channel_t target_ch) {
+
+	lively_node_plug_t **plug_iterator = &source->plugs;
+	while (*plug_iterator) {
+		bool target_match = (*plug_iterator)->target == target;
+		bool channel_match = (*plug_iterator)->target_ch == target_ch
+			&& (*plug_iterator)->source_ch == source_ch;
+
+		if (target_match && channel_match) {
+			return plug_iterator;
+		}
+		plug_iterator = &(*plug_iterator)->next;
+	}
+
+	return NULL;
+}
+
+bool
+lively_scene_is_connected (
+	lively_scene_t *scene,
+	lively_node_t *source,
+	lively_node_channel_t source_ch,
+	lively_node_t *target,
+	lively_node_channel_t target_ch) {
+
+	return scene_find_plug (
+		scene, source, source_ch, target, target_ch) != NULL;
 }
 
 void
 lively_scene_connect(
 	lively_scene_t *scene,
-	lively_scene_node_t *source,
-	lively_scene_node_port_t source_port,
-	lively_scene_node_t *target,
-	lively_scene_node_port_t target_port) {
+	lively_node_t *source,
+	lively_node_channel_t source_ch,
+	lively_node_t *target,
+	lively_node_channel_t target_ch) {
 
-	lively_scene_node_plug_t *plug;
+	lively_node_plug_t *plug;
 
-	// 1. Check if nodes are already connected there.
-	plug = source->plugs;
-	while (plug) {
-		if (is_matching_scene_node_plug (plug, source, source_port, target, target_port)) {
-			lively_app_log (
-				scene->app,
-				LIVELY_WARN,
-				"scene",
-				"Attempted to connect ports that are already connected");
-			return;
-		}
-		plug = plug->next;
+	if (lively_scene_is_connected (
+		scene, source, source_ch, target, target_ch)) {
+
+		lively_app_log (
+			scene->app,
+			LIVELY_WARN,
+			"scene",
+			"Attempted to connect ports that are already connected");
+		return;
 	}
 
-	// 2. Allocate new connection
 	plug = malloc (sizeof *plug);
 	if (!plug) {
 		lively_app_log (
@@ -97,47 +135,39 @@ lively_scene_connect(
 		return;
 	}
 
-	plug->source = source;
-	plug->target = target;
-	plug->source_port = source_port;
-	plug->target_port = target_port;
-	plug->filled = false;
 	plug->next = NULL;
+	plug->target = target;
+	plug->source_ch = source_ch;
+	plug->target_ch = target_ch;
 
-	// 3. Insert connection
-	lively_scene_node_plug_t *first = source->plugs;
+	lively_node_plug_t *head = source->plugs;
 	source->plugs = plug;
-	plug->next = first;
+	plug->next = head;
 }
 
 void
 lively_scene_disconnect(
 	lively_scene_t *scene,
-	lively_scene_node_t *source,
-	lively_scene_node_port_t source_port,
-	lively_scene_node_t *target,
-	lively_scene_node_port_t target_port) {
+	lively_node_t *source,
+	lively_node_channel_t source_ch,
+	lively_node_t *target,
+	lively_node_channel_t target_ch) {
 
-	lively_scene_node_plug_t *plug = source->plugs;
-	lively_scene_node_plug_t *prev = NULL;
+	lively_node_plug_t **plug;
 
-	while (plug) {
-		if (is_matching_scene_node_plug (plug, source, source_port, target, target_port)) {
-			if (prev) {
-				prev->next = plug->next;
-			} else {
-				source->plugs = plug->next;
-			}
-			free (plug);
-			return;
-		}
-		prev = plug;
-		plug = plug->next;
+	plug = scene_find_plug (scene, source, source_ch, target, target_ch);
+
+	if (!plug) {
+		lively_app_log (
+			scene->app,
+			LIVELY_WARN,
+			"scene",
+			"Attempted to disconnect ports that are not connected");
+		return;
 	}
 
-	lively_app_log (
-		scene->app,
-		LIVELY_WARN,
-		"scene",
-		"Attempted to disconnect port that was non-existant");
+	lively_node_plug_t *next = (*plug)->next;
+	*plug = next;
+
+	free (plug);
 }

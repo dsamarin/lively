@@ -11,9 +11,9 @@ lively_SOURCES = main.c \
 	lively_app.h \
 	lively_audio.c \
 	lively_audio.h \
+	lively_node.h \
 	lively_scene.c \
-	lively_scene.h \
-	lively_scene_node.h
+	lively_scene.h
 
 lively_LDADD = $(PLATFORM)/libplatform.a
 lively_DEPENDENCIES = $(PLATFORM)/libplatform.a
