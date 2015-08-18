@@ -4,3 +4,4 @@ if HAVE_DOXYGEN
 	MAYBE_DOXYGEN = doc
 endif
 SUBDIRS = src $(MAYBE_DOXYGEN)
+DIST_SUBDIRS = src doc
