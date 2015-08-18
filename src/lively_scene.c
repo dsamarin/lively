@@ -12,6 +12,15 @@ lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 }
 
 void
+lively_scene_destroy(lively_scene_t *scene) {
+	lively_node_t *node_iterator = scene->head;
+	while (node_iterator) {
+		lively_scene_disconnect_node (scene, node_iterator);
+		node_iterator = node_iterator->next;
+	}
+}
+
+void
 lively_scene_nodes_foreach(
 	lively_scene_t *scene,
 	void (*callback) (lively_scene_t *scene, lively_node_t *node, void *data),
@@ -58,13 +67,16 @@ void
 lively_scene_disconnect_node (lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t *node_iterator = scene->head;
 	while (node_iterator) {
-		lively_node_plug_t *plug_iterator = node_iterator->plugs;
-		while (plug_iterator) {
-			lively_node_plug_t *plug_iterator_next = plug_iterator->next;
-			free (plug_iterator);
-			plug_iterator = plug_iterator_next;
+		if (node_iterator == node) {
+			lively_node_plug_t *plug_iterator = node_iterator->plugs;
+			while (plug_iterator) {
+				lively_node_plug_t *plug_iterator_next = plug_iterator->next;
+				free (plug_iterator);
+				plug_iterator = plug_iterator_next;
+			}
+			node_iterator->plugs = NULL;
+			break;
 		}
-		node_iterator->plugs = NULL;
 		node_iterator = node_iterator->next;
 	}
 }
@@ -124,6 +136,8 @@ lively_scene_connect(
 			"Attempted to connect ports that are already connected");
 		return;
 	}
+
+	// TODO: Check for cyclic ports
 
 	plug = malloc (sizeof *plug);
 	if (!plug) {
