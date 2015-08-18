@@ -1,0 +1,122 @@
+@import url(//fonts.googleapis.com/css?family=Roboto:400,700|PT+Mono);
+
+/* General */
+* {
+	margin: 0;
+	padding: 0;
+}
+a { color: white; text-decoration: none; }
+a:hover {text-decoration: underline; }
+
+body {
+	background: #30293D;
+	color: #A397BA;
+	font: 400 12pt/125% Roboto, sans-serif;
+}
+
+/* Header */
+#titlearea {
+	background: #160F24;
+	text-align: center;
+	padding: 1em 0;
+}
+#header {
+	width: 960px;
+	margin: 0 auto;
+	text-align: left;
+	padding: 0 0.5em;
+}
+
+h1 {
+	font-weight: normal;
+	line-height: 125%;
+	color: white;
+}
+#projectnumber { font-size: 10pt; }
+
+/* Tabs */
+.tabs {
+	background: #120C1D;
+}
+.tablist {
+	margin: 0 auto;
+	width: 960px;
+	list-style: none;
+	clear: left;
+	overflow: hidden;
+}
+.tablist li {
+	float: left;
+}
+.tablist li a {
+	display: block;
+	padding: 1em 0.5em;
+	color: inherit;
+	text-decoration: none;
+}
+.tablist li a:hover, .tablist li.current a {
+	background: #160F24;
+	color: white;
+
+}
+
+.tabs2 {
+	background: #0D0915;
+}
+.tabs2 .tablist a {
+	padding: 0.5em;
+}
+.tabs2 .tablist a:hover, .tabs2 .tablist li.current a {
+	background: #120C1D;
+}
+
+.tabs3 .tablist a {
+	padding: 0.5em;
+}
+
+.navpath { display: none; }
+
+/* Page */
+.header, .contents { padding: 0 0.5em; }
+.title { font-size: 2em; color: white; margin: 0.5em 0; }
+
+/* Page headers */
+h2.groupheader {
+	margin: 0.25em 0 0.5em;
+}
+
+/* Footer */
+.footer {
+	font-size: 8pt;
+	text-align: center;
+}
+
+/* Code */
+.fragment {
+	font: 10pt PT Mono, monospace;
+}
+.fragment a {
+	color: inherit;
+	text-decoration: none;
+}
+.lineno a {
+	color: white;
+	font-weight: bold;
+}
+div.line {
+	background: #2B2537;
+	color: #DADADA;
+	text-wrap: unrestricted;
+	white-space: -moz-pre-wrap; /* Moz */
+	white-space: -pre-wrap;     /* Opera 4-6 */
+	white-space: -o-pre-wrap;   /* Opera 7 */
+	white-space: pre-wrap;      /* CSS3  */
+	word-wrap: break-word;      /* IE 5.5+ */
+}
+.lineno { background: #0D0915; color: #30293D; padding-right: 1em; }
+.keyword { color: #FF8700; }
+.keywordtype, .keywordflow { color: #8787AF; font-weight: bold; }
+.stringliteral { color: #AFD700; }
+.charliteral { color: #FF8700; }
+.comment { color: #808080; }
+.preprocessor { color: #D8DBB3; }
