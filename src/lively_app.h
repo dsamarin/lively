@@ -3,36 +3,30 @@
 
 #include <stdbool.h>
 
-typedef struct lively_app lively_app_t;
-
 #include "lively_audio.h"
+#include "lively_scene.h"
 
 /**
  * Specifies the level used for logging messages within lively.
  */
 enum lively_log_level {
-
 	LIVELY_TRACE,
 	/**< Information that is diagnostically helpful while developing Lively */
-
 	LIVELY_DEBUG,
 	/**< Information that is diagnostically helpful to administrators developing a Lively system */
-
 	LIVELY_INFO,
 	/**< Information that is generally helpful regarding state changes or assumptions */
-
 	LIVELY_WARN,
 	/**< Information regarding recoverable application oddities */
-
 	LIVELY_ERROR,
 	/**< Information regarding unrecoverable errors */
-
 	LIVELY_FATAL
 	/**< Information regarding errors that force an immediate shutdown */
 };
 
 typedef struct lively_app {
-	lively_audio_t audio;
+	struct lively_audio audio;
+	struct lively_scene scene;
 	bool running;
 } lively_app_t;
 

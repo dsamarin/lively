@@ -18,6 +18,7 @@
 void
 lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 	scene->app = app;
+	scene->audio = &app->audio;
 	scene->head = NULL;
 	scene->name = "scene000";
 }
@@ -25,7 +26,7 @@ lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 /**
 * Destroys a Lively Scene by cleaning up memory
 *
-* This function cleans up memory by disconnecting all plugs from each 
+* This function cleans up memory by disconnecting all plug_head from each 
 * Lively Node. The caller is responsible for cleaning up Lively Nodes.
 *
 * @param scene
@@ -69,7 +70,14 @@ void
 lively_scene_add_node(lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t *head = scene->head;
 	scene->head = node;
+
 	node->next = head;
+
+	node->plug_head = NULL;
+	node->inputs_ready = 0;
+	node->inputs_total = 0;
+
+	node->set_buffer_length (node, scene->audio->buffer_length);
 }
 
 /**
@@ -105,7 +113,7 @@ lively_scene_remove_node(lively_scene_t *scene, lively_node_t *node) {
 }
 
 /**
-* Disconnects all plugs to and from the specified Lively Node
+* Disconnects all plug_head to and from the specified Lively Node
 *
 * @param scene The Lively Scene which contains the Lively Node
 * @param node The Lively Node
@@ -115,14 +123,89 @@ lively_scene_disconnect_node (lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t *node_iterator = scene->head;
 	while (node_iterator) {
 		if (node_iterator == node) {
-			lively_node_plug_t *plug_iterator = node_iterator->plugs;
+			lively_node_plug_t *plug_iterator = node_iterator->plug_head;
 			while (plug_iterator) {
 				lively_node_plug_t *plug_iterator_next = plug_iterator->next;
+
+				// Disconnect, then free plug.
+				plug_iterator->target->inputs_total--;
 				free (plug_iterator);
+
 				plug_iterator = plug_iterator_next;
 			}
-			node_iterator->plugs = NULL;
+			node_iterator->plug_head = NULL;
 			break;
+		}
+		node_iterator = node_iterator->next;
+	}
+}
+
+static void
+lively_scene_process_node (
+	lively_scene_t *scene,
+	lively_node_t *node,
+	unsigned int length) {
+
+	// First we call the node's process() func.
+	bool success = node->process (node, length);
+	if (!success) {
+		// TODO: Safe logging from audio processing thread.
+		/*lively_app_log (scene->app, LIVELY_WARN, "scene",
+			"Node '%s' in scene '%s' reported processing failure",
+			node->name, scene->name);*/
+		return;
+	}
+
+	lively_node_plug_t *plug_iterator = node->plug_head;
+	while (plug_iterator) {
+		// #plug = *plug_iterator
+		// #target = *plug_iterator->target
+		//
+		// Given: #plug is written.
+		// Goal: All plug_head to #target are written.
+		//
+		// It follows that to reach the goal, we need to know if there are any
+		// other plug_head. If there are no more other plug_head to target, it follows
+		// that we have accomplished our goal. Otherwise, we need to wait for
+		// the other plug_head before we go on.
+		//
+		// We can keep track of the number of written plug_head with a temporary
+		// lengther variable on #target. This can be reset after the node is
+		// processed.
+		//
+		// #target.inputs_ready += 1.
+		// if (#target.inputs_ready == #target.inputs_total) {
+		// 		#goal reached
+		// } else {
+		// 		#skip target, not ready
+		// }
+
+		lively_node_plug_t *plug = plug_iterator;
+		lively_node_t *target = plug->target;
+
+		float *source_buffer = node->get_read_buffer (node, plug->source_ch);
+		float *target_buffer = target->get_write_buffer (target, plug->target_ch);
+		for (size_t i = 0; i < length; i++) {
+			target_buffer[i] += source_buffer[i];
+		}
+
+		target->inputs_ready += 1;
+		if (target->inputs_ready == target->inputs_total) {
+			target->inputs_ready = 0;
+			lively_scene_process_node (scene, target, length);
+		}
+
+		plug_iterator = plug_iterator->next;
+	}
+}
+
+void
+lively_scene_process (lively_scene_t *scene, unsigned int length) {
+	// We do a depth-first search, starting with the input nodes.
+	lively_node_t *node_iterator = scene->head;
+	while (node_iterator) {
+		if (node_iterator->type == LIVELY_NODE_INPUT) {
+			lively_scene_process_node (scene, node_iterator, length);
 		}
 		node_iterator = node_iterator->next;
 	}
@@ -136,7 +219,7 @@ scene_find_plug (
 	lively_node_t *target,
 	lively_node_channel_t target_ch) {
 
-	lively_node_plug_t **plug_iterator = &source->plugs;
+	lively_node_plug_t **plug_iterator = &source->plug_head;
 	while (*plug_iterator) {
 		bool target_match = (*plug_iterator)->target == target;
 		bool channel_match = (*plug_iterator)->target_ch == target_ch
@@ -160,7 +243,7 @@ scene_find_plug (
 * @param target The target node
 * @param target_ch The target channel
 *
-* @return 
+* @return true if the plug exists
 */
 bool
 lively_scene_is_connected (
@@ -203,11 +286,11 @@ lively_scene_connect(
 			scene->app,
 			LIVELY_WARN,
 			"scene",
-			"Attempted to connect ports that are already connected");
+			"Attempted to connect channels that are already connected");
 		return;
 	}
 
-	// TODO: Check for cyclic ports
+	// TODO: Check for cyclic connections
 
 	plug = malloc (sizeof *plug);
 	if (!plug) {
@@ -224,9 +307,11 @@ lively_scene_connect(
 	plug->source_ch = source_ch;
 	plug->target_ch = target_ch;
 
-	lively_node_plug_t *head = source->plugs;
-	source->plugs = plug;
+	lively_node_plug_t *head = source->plug_head;
+	source->plug_head = plug;
 	plug->next = head;
+
+	target->inputs_total++;
 }
 
 /**
@@ -258,11 +343,13 @@ lively_scene_disconnect(
 			scene->app,
 			LIVELY_WARN,
 			"scene",
-			"Attempted to disconnect ports that are not connected");
+			"Attempted to disconnect channels that are not connected");
 		return;
 	}
 
 	lively_node_plug_t *next = (*plug)->next;
 	free (*plug);
 	*plug = next;
+
+	target->inputs_total--;
 }

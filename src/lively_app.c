@@ -9,6 +9,7 @@
 
 #include "lively_app.h"
 #include "lively_audio.h"
+#include "lively_scene.h"
 
 #include "platform.h"
 
@@ -39,11 +40,17 @@ void lively_app_run (lively_app_t *app) {
 
 	lively_app_log (app, LIVELY_INFO, "main", "Running lively");
 
-	if (lively_audio_start (&app->audio)) {
-		app->running = true;
-		platform_sleep (3);
-		lively_audio_stop (&app->audio);
+	lively_scene_init (&app->scene, app);
+	
+	if (!lively_audio_start (&app->audio)) {
+		return;
 	}
+
+	app->running = true;
+	platform_sleep (6);
+
+	lively_audio_stop (&app->audio);
+	lively_scene_destroy (&app->scene);
 }
 void lively_app_stop (lively_app_t *app) {
 	if (!app->running) {

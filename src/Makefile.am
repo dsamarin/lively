@@ -11,6 +11,7 @@ lively_SOURCES = main.c \
 	lively_app.h \
 	lively_audio.c \
 	lively_audio.h \
+	lively_node.c \
 	lively_node.h \
 	lively_scene.c \
 	lively_scene.h
