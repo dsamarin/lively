@@ -20,18 +20,44 @@ lively_node_io_process(lively_node_t *node, unsigned int length) {
 	return true;
 }
 
+/**
+* Sets the buffer length for the specified Lively Node.
+*
+* This function is atomic, meaning no values will change if we will be
+* unsuccessful, since we will allocate memory if it is needed.
+*
+* @param node The Lively Node
+* @param length The new buffer length, in number of samples.
+*
+* @return A success value
+*/
 bool
 lively_node_io_set_buffer_length(lively_node_t *node, unsigned int length) {
+	unsigned int previous = node->buffer_length;
 	lively_node_io_t *node_io = (lively_node_io_t *) node;
-	if (node_io->buffer) {
-		if (node->buffer_length < length) {
-			free (node_io->buffer);
-		} else {
-			return true;
-		}
+
+	if (length <= previous) {
+		// Our buffer is already big enough.
+		node->buffer_length = length;
+		return true;
 	}
-	node_io->buffer = malloc (length * sizeof *node_io->buffer);
-	return node_io->buffer != NULL;
+
+	float *buffer = malloc (length * sizeof *buffer);
+	if (!buffer) {
+		// Memory allocation failed.
+		return false;
+	}
+
+	if (node_io->buffer) {
+		// We should free the old buffer first.
+		free (node_io->buffer);
+	}
+
+	// Set the buffer to the new allocation
+	node_io->buffer = buffer;
+	node->buffer_length = length;
+
+	return true;
 }
 
 float*

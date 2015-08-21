@@ -5,13 +5,13 @@
 
 struct lively_app;
 
-#include "lively_audio.h"
 #include "lively_node.h"
 
 typedef struct lively_scene {
 	struct lively_app *app;
-	struct lively_audio *audio;
 	struct lively_node *head;
+
+	unsigned int buffer_length;
 
 	const char *name;
 } lively_scene_t;
@@ -24,7 +24,7 @@ void lively_scene_nodes_foreach(
 	void (*callback) (struct lively_scene *scene, struct lively_node *node, void *data),
 	void *data);
 
-void lively_scene_add_node(struct lively_scene *scene, struct lively_node *node);
+bool lively_scene_add_node(struct lively_scene *scene, struct lively_node *node);
 void lively_scene_remove_node(struct lively_scene *scene, struct lively_node *node);
 void lively_scene_disconnect_node (struct lively_scene *scene, struct lively_node *node);
 

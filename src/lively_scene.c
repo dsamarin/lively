@@ -18,7 +18,7 @@
 void
 lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 	scene->app = app;
-	scene->audio = &app->audio;
+	scene->buffer_length = 512;
 	scene->head = NULL;
 	scene->name = "scene000";
 }
@@ -61,12 +61,67 @@ lively_scene_nodes_foreach(
 }
 
 /**
+* Returns the current buffer length that is set for all of the Lively Nodes
+* belonging to this Lively Scene.
+*
+* @param scene The Lively Scene
+*
+* @return The buffer length, in number of samples
+*/
+unsigned int
+lively_scene_get_buffer_length (lively_scene_t *scene) {
+	return scene->buffer_length;
+}
+
+/**
+* Sets the buffer length for all nodes in the Lively Scene, atomically, and
+* returns its success.
+*
+* The function first sets the buffer length for all nodes, but if we are
+* unsuccessful, we will revert back to the previous buffer length.
+*
+* @param scene The Lively Scene
+* @param length The buffer length, in number of samples
+*
+* @return A success value
+*/
+bool
+lively_scene_set_buffer_length (lively_scene_t *scene, unsigned int length) {
+	bool success = true;
+	unsigned int previous = scene->buffer_length;
+
+	lively_node_t *node_iterator = scene->head;
+	while (node_iterator) {
+		if (!node_iterator->set_buffer_length (node_iterator, length)) {
+			success = false;
+			break;
+		}
+		node_iterator = node_iterator->next;
+	}
+
+	if (success) {
+		scene->buffer_length = length;
+	} else {
+		// Revert back
+		node_iterator = scene->head;
+		while (node_iterator) {
+			node_iterator->set_buffer_length (node_iterator, previous);
+			node_iterator = node_iterator->next;
+		}
+	}
+
+	return success;
+}
+
+/**
 * Adds a Lively Node to the Lively Scene
 *
 * @param scene The Lively Scene
 * @param node The Lively Node
+*
+* @return A success value
 */
-void
+bool
 lively_scene_add_node(lively_scene_t *scene, lively_node_t *node) {
 	lively_node_t *head = scene->head;
 	scene->head = node;
@@ -77,7 +132,7 @@ lively_scene_add_node(lively_scene_t *scene, lively_node_t *node) {
 	node->inputs_ready = 0;
 	node->inputs_total = 0;
 
-	node->set_buffer_length (node, scene->audio->buffer_length);
+	return node->set_buffer_length (node, scene->buffer_length);
 }
 
 /**
