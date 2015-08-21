@@ -12,6 +12,7 @@ lively_node_io_init (lively_node_io_t *node_io, lively_node_type_t type) {
 	node->get_write_buffer = lively_node_io_get_buffer;
 	node->set_buffer_length = lively_node_io_set_buffer_length;
 
+	node->buffer_length = 0;
 	node_io->buffer = NULL;
 }
 
