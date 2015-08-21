@@ -24,6 +24,9 @@ void lively_scene_nodes_foreach(
 	void (*callback) (struct lively_scene *scene, struct lively_node *node, void *data),
 	void *data);
 
+unsigned int lively_scene_get_buffer_length (lively_scene_t *scene);
+bool lively_scene_set_buffer_length (lively_scene_t *scene, unsigned int length);
+
 bool lively_scene_add_node(struct lively_scene *scene, struct lively_node *node);
 void lively_scene_remove_node(struct lively_scene *scene, struct lively_node *node);
 void lively_scene_disconnect_node (struct lively_scene *scene, struct lively_node *node);
