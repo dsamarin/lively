@@ -18,7 +18,7 @@
 void
 lively_scene_init(lively_scene_t *scene, lively_app_t *app) {
 	scene->app = app;
-	scene->buffer_length = 512;
+	scene->buffer_length = 0;
 	scene->head = NULL;
 	scene->name = "scene000";
 }

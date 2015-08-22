@@ -38,13 +38,14 @@ static int audio_process (jack_nframes_t nframes, void *arg) {
 
 	float *lil = lively_node_io_get_buffer ((lively_node_t *) &stereo_left_in, LIVELY_MONO);
 	float *lir = lively_node_io_get_buffer ((lively_node_t *) &stereo_right_in, LIVELY_MONO);
-	float *lol = lively_node_io_get_buffer ((lively_node_t *) &stereo_left_out, LIVELY_MONO);
-	float *lor = lively_node_io_get_buffer ((lively_node_t *) &stereo_right_out, LIVELY_MONO);
 
 	memcpy (lil, il, length * sizeof (float));
 	memcpy (lir, ir, length * sizeof (float));
 
 	lively_scene_process (scene, length);
+
+	float *lol = lively_node_io_get_buffer ((lively_node_t *) &stereo_left_out, LIVELY_MONO);
+	float *lor = lively_node_io_get_buffer ((lively_node_t *) &stereo_right_out, LIVELY_MONO);
 
 	memcpy (ol, lol, length * sizeof (float));
 	memcpy (or, lor, length * sizeof (float));
@@ -105,6 +106,7 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 	lively_app_log (app, LIVELY_DEBUG, "audio",
 		"Jack buffer size is set to %" PRIu32 " frames", buffer_size);
 	audio->buffer_length = buffer_size;
+	lively_scene_set_buffer_length (&app->scene, buffer_size);
 
 	/*
 	 * 2. Connect Jack audio API to Lively
@@ -180,14 +182,14 @@ bool lively_audio_start (lively_audio_t *audio) {
 		lively_app_log (audio->app, LIVELY_FATAL, "audio",
 			"No Jack system capture ports");
 	}
-	if (jack_connect (audio->client, ports[0],
-		jack_port_name (jack_input_left))) {
+	if (jack_connect (audio->client,
+		ports[0], jack_port_name (jack_input_left))) {
 		lively_app_log (audio->app, LIVELY_ERROR, "audio",
 			"Could not connect input left");
 		return false;
 	}
-	if (jack_connect (audio->client, ports[1],
-		jack_port_name (jack_input_right))) {
+	if (jack_connect (audio->client,
+		ports[1], jack_port_name (jack_input_right))) {
 		lively_app_log (audio->app, LIVELY_ERROR, "audio",
 			"Could not connect input right");
 		return false;
@@ -200,14 +202,14 @@ bool lively_audio_start (lively_audio_t *audio) {
 		lively_app_log (audio->app, LIVELY_FATAL, "audio",
 			"No Jack system playback ports");
 	}
-	if (jack_connect (audio->client, ports[0],
-		jack_port_name (jack_output_left))) {
+	if (jack_connect (audio->client,
+		jack_port_name (jack_output_left), ports[0])) {
 		lively_app_log (audio->app, LIVELY_ERROR, "audio",
 			"Could not connect input left");
 		return false;
 	}
-	if (jack_connect (audio->client, ports[1],
-		jack_port_name (jack_output_right))) {
+	if (jack_connect (audio->client,
+		jack_port_name (jack_output_right), ports[1])) {
 		lively_app_log (audio->app, LIVELY_ERROR, "audio",
 			"Could not connect input right");
 		return false;

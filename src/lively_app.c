@@ -47,7 +47,7 @@ void lively_app_run (lively_app_t *app) {
 	}
 
 	app->running = true;
-	platform_sleep (6);
+	platform_sleep (16);
 
 	lively_audio_stop (&app->audio);
 	lively_scene_destroy (&app->scene);
