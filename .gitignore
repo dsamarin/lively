@@ -1,11 +1,13 @@
 # autotools
+Makefile
 Makefile.in
+configure
+.deps/
 aclocal.m4
 autom4te.cache/
 compile
-config.guess
-config.sub
-configure
+config.*
 depcomp
 install-sh
 missing
+stamp-h1
