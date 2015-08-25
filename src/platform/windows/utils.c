@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#include "../platform.h"
+#include "../../platform.h"
 
 void platform_pause (void) {
 	Sleep (INFINITE);
