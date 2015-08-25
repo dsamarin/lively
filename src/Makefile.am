@@ -54,6 +54,8 @@ lively_LDADD = $(ALSA_LIBS)
 endif
 if USE_JACK
 lively_SOURCES += $(audio_jack_sources)
+lively_CFLAGS += $(JACK_CFLAGS)
+lively_LDADD = $(JACK_LIBS)
 endif
 if USE_ASIO
 lively_SOURCES += $(audio_asio_sources)

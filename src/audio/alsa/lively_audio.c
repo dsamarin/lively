@@ -7,9 +7,10 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "lively_app.h"
-#include "lively_audio.h"
-#include "lively_node.h"
+#include "../../lively_app.h"
+#include "../../lively_node.h"
+
+#include "audio.h"
 
 /* Demonstration purposes */
 static lively_node_io_t stereo_left_in;
@@ -78,13 +79,15 @@ static bool audio_configure_stream (
 	snd_pcm_sw_params_t *sw_params,
 	unsigned int *channels) {
 
+	lively_app_t *app = audio->app;
+	lively_audio_backend_t *backend = audio->backend;
+
 	int err;
 	bool found;
 	unsigned int channels_max;
-	unsigned int frames_per_second = audio->frames_per_second;
-	lively_app_t *app = audio->app;
+	unsigned int frames_per_second = backend->frames_per_second;
 
-	// This function narrows down the possible configurations for this
+// This function narrows down the possible configurations for this
 	// stream by allowing all configurations and narrowing down based off
 	// of a sequence of constraints given to it.
 
@@ -141,7 +144,7 @@ static bool audio_configure_stream (
 	if (err < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not set sample rate to %u Hz for %s stream",
-			audio->frames_per_second, stream);
+			backend->frames_per_second, stream);
 		return false;
 	}
 
@@ -161,19 +164,19 @@ static bool audio_configure_stream (
 	}
 
 	err = snd_pcm_hw_params_set_period_size (handle, hw_params,
-		audio->frames_per_period, 0);
+		backend->frames_per_period, 0);
 	if (err < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not set period size to %u frames for %s stream",
-			audio->frames_per_period, stream);
+			backend->frames_per_period, stream);
 		return false;
 	}
 
-	if (frames_per_second != audio->frames_per_second) {
+	if (frames_per_second != backend->frames_per_second) {
 		lively_app_log (app, LIVELY_WARN, "audio",
 			"Setting sample rate to closest match %u Hz instead of %u Hz",
-			frames_per_second, audio->frames_per_second);
-		audio->frames_per_second = frames_per_second;
+			frames_per_second, backend->frames_per_second);
+		backend->frames_per_second = frames_per_second;
 	}
 
 	*channels = channels_max;
@@ -184,48 +187,49 @@ static bool audio_configure_stream (
 static bool audio_configure_duplex (lively_audio_t *audio) {
 	unsigned int channels;
 	lively_app_t *app = audio->app;
+	lively_audio_backend_t *backend = audio->backend;
 
 	// Params structures
-	if (snd_pcm_hw_params_malloc (&audio->playback_hw_params) < 0) {
+	if (snd_pcm_hw_params_malloc (&backend->playback_hw_params) < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not allocate playback hardware params structure");
 		return false;
 	}
-	if (snd_pcm_sw_params_malloc (&audio->playback_sw_params) < 0) {
+	if (snd_pcm_sw_params_malloc (&backend->playback_sw_params) < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not allocate playback software params structure");
 		return false;
 	}
-	if (snd_pcm_hw_params_malloc (&audio->capture_hw_params) < 0) {
+	if (snd_pcm_hw_params_malloc (&backend->capture_hw_params) < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not allocate capture hardware params structure");
 		return false;
 	}
-	if (snd_pcm_sw_params_malloc (&audio->capture_sw_params) < 0) {
+	if (snd_pcm_sw_params_malloc (&backend->capture_sw_params) < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not allocate capture software params structure");
 		return false;
 	}
 
 	if (!audio_configure_stream (audio, "playback", 
-		audio->handle_playback,
-		audio->playback_hw_params,
-		audio->playback_sw_params,
+		backend->handle_playback,
+		backend->playback_hw_params,
+		backend->playback_sw_params,
 		&channels)) {
 
 		return false;
 	}
-	audio->playback_channels = channels;
+	backend->playback_channels = channels;
 
 	if (!audio_configure_stream (audio, "capture",
-		audio->handle_capture,
-		audio->capture_hw_params,
-		audio->capture_sw_params,
+		backend->handle_capture,
+		backend->capture_hw_params,
+		backend->capture_sw_params,
 		&channels)) {
 
 		return false;
 	}
-	audio->capture_channels = channels;
+	backend->capture_channels = channels;
 
 	return true;
 }
@@ -234,28 +238,35 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 	int err;
 	const char *device = "hw:0";
 
+	lively_audio_backend_t *backend = malloc (sizeof *backend);
+	if (!backend) {
+		lively_app_log (app, LIVELY_FATAL, "audio",
+			"Could not allocate audio backend");
+		return false;
+	}
+
 	// Initialize fields
 	audio->app = app;
-	audio->handle_capture = NULL;
-	audio->handle_playback = NULL;
-	audio->playback_hw_params = NULL;
-	audio->playback_sw_params = NULL;
-	audio->capture_hw_params = NULL;
-	audio->capture_sw_params = NULL;
+	backend->handle_capture = NULL;
+	backend->handle_playback = NULL;
+	backend->playback_hw_params = NULL;
+	backend->playback_sw_params = NULL;
+	backend->capture_hw_params = NULL;
+	backend->capture_sw_params = NULL;
 
-	audio->started = false;
-	audio->playback_channels = 0;
-	audio->capture_channels = 0;
-	audio->frames_per_second = 0;
-	audio->frames_per_period = 0;
-	audio->periods_per_buffer = 0;
+	backend->started = false;
+	backend->playback_channels = 0;
+	backend->capture_channels = 0;
+	backend->frames_per_second = 0;
+	backend->frames_per_period = 0;
+	backend->periods_per_buffer = 0;
 
 	/*
 	 * 1. Open playback and capture handles
 	 */
 
-	snd_pcm_t *handle_capture = audio->handle_capture;
-	snd_pcm_t *handle_playback = audio->handle_playback;
+	snd_pcm_t *handle_capture = backend->handle_capture;
+	snd_pcm_t *handle_playback = backend->handle_playback;
 
 	// Playback device
 	err = snd_pcm_open (&handle_playback, device,
@@ -264,7 +275,7 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 		audio_handle_pcm_open_error (app, device, "playback", err);
 		return false;
 	}
-	audio->handle_playback = handle_playback;
+	backend->handle_playback = handle_playback;
 
 	// Capture device
 	err = snd_pcm_open (&handle_capture, device,
@@ -273,16 +284,16 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 		audio_handle_pcm_open_error (app, device, "capture", err);
 		return false;
 	}
-	audio->handle_capture = handle_capture;
+	backend->handle_capture = handle_capture;
 
-	err = snd_pcm_nonblock (audio->handle_playback, 0);
+	err = snd_pcm_nonblock (backend->handle_playback, 0);
 	if (err < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not set playback device to blocking mode");
 		return false;
 	}
 
-	err = snd_pcm_nonblock (audio->handle_capture, 0);
+	err = snd_pcm_nonblock (backend->handle_capture, 0);
 	if (err < 0) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not set capture device to blocking mode");
@@ -293,13 +304,13 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 		return false;
 	}
 
-	if (snd_pcm_link (audio->handle_playback, audio->handle_capture)) {
+	if (snd_pcm_link (backend->handle_playback, backend->handle_capture)) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"Could not link capture and playback handles");
 		return false;
 	}
 
-	lively_scene_set_buffer_length (&app->scene, audio->frames_per_period);
+	lively_scene_set_buffer_length (&app->scene, backend->frames_per_period);
 
 	/* Create input and output nodes */
 	lively_node_io_init (&stereo_left_in, LIVELY_NODE_INPUT);
@@ -325,43 +336,50 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 }
 
 bool lively_audio_start (lively_audio_t *audio) {
+	lively_audio_backend_t *backend = audio->backend;
 
-	if (audio->started) {
+	if (!backend->started) {
+		backend->started = true;
+		return true;
+	} else {
 		return false;
 	}
-	
-	audio->started = true;
-
-	return true;
 }
 
 bool lively_audio_stop (lively_audio_t *audio) {
+	lively_audio_backend_t *backend = audio->backend;
 
-	if (!audio->started) {
+	if (backend->started) {
+		backend->started = false;
+		return true;
+	} else {
 		return false;
 	}
-
-	audio->started = false;
-
-	return true;
 }
 
 void lively_audio_destroy (lively_audio_t *audio) {
+	lively_audio_backend_t *backend = audio->backend;
+
 	// Shutdown our app if running
 	if (audio->app) {
 		lively_app_stop (audio->app);
 		audio->app = NULL;
 	}
 
-	if (audio->capture_sw_params)
-		snd_pcm_sw_params_free (audio->capture_sw_params);
-	if (audio->capture_hw_params)
-		snd_pcm_hw_params_free (audio->capture_hw_params);
-	if (audio->playback_sw_params)
-		snd_pcm_sw_params_free (audio->playback_sw_params);
-	if (audio->playback_hw_params)
-		snd_pcm_hw_params_free (audio->playback_hw_params);
+	if (backend) {
+		if (backend->capture_sw_params)
+			snd_pcm_sw_params_free (backend->capture_sw_params);
+		if (backend->capture_hw_params)
+			snd_pcm_hw_params_free (backend->capture_hw_params);
+		if (backend->playback_sw_params)
+			snd_pcm_sw_params_free (backend->playback_sw_params);
+		if (backend->playback_hw_params)
+			snd_pcm_hw_params_free (backend->playback_hw_params);
 
-	if (audio->handle_playback) snd_pcm_close (audio->handle_playback);
-	if (audio->handle_capture) snd_pcm_close (audio->handle_capture);
+		if (backend->handle_playback) snd_pcm_close (backend->handle_playback);
+		if (backend->handle_capture) snd_pcm_close (backend->handle_capture);
+
+		free (backend);
+		audio->backend = NULL;
+	}
 }

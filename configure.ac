@@ -12,6 +12,7 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 
 AC_CANONICAL_HOST
+PKG_PROG_PKG_CONFIG
 
 # Specify options
 AC_ARG_WITH([alsa],
@@ -31,27 +32,22 @@ case "$host" in
 	*) os_linux=yes ;;
 esac
 
-# Checks for programs
-AC_PROG_CC
-AC_PROG_RANLIB
-
-AC_C_BIGENDIAN
-
 # Checks for ALSA support
 have_alsa=no
 if test "$with_alsa" = "yes"; then
 	PKG_CHECK_MODULES([ALSA], alsa, [
 			have_alsa=yes
-			AC_SUBST(ALSA_CFLAGS)
 			AC_SUBST(ALSA_LIBS)
-		],
-		AC_MSG_ERROR([pkg-config could not find alsa; install libasound2-dev]))
+		])
 fi
 
 # Checks for JACK support
 have_jack=no
 if test "$with_jack" = "yes"; then
-	PKG_CHECK_MODULES([JACK], jack, [have_jack=yes], [have_jack=no])
+	PKG_CHECK_MODULES([JACK], jack, [
+			have_jack=yes
+			AC_SUBST(JACK_LIBS)
+		])
 fi
 
 # Checks for ASIO support
@@ -59,6 +55,20 @@ have_asio=no
 if test "$with_asio" = "yes"; then
 	AC_MSG_ERROR([ASIO support is not implemented yet.])
 fi
+
+# Sanity check
+if test "$have_asio" = "no" \
+	&& test "$have_alsa" = "no" \
+	&& test "$have_jack" = "no"; then
+
+	AC_MSG_ERROR([An audio backend must be specified, see --help.])
+fi
+
+# Checks for programs
+AC_PROG_CC
+AC_PROG_RANLIB
+
+AC_C_BIGENDIAN
 
 # Doxygen setup
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
