@@ -24,7 +24,7 @@ PKG_CHECK_MODULES([ALSA], alsa,
 			AC_SUBST(ALSA_LIBS)
 		],
 		AC_MSG_ERROR([alsa is not available on this system; install libasound2-dev])),
-	AC_MSG_ERROR([pkg-config could not find alsa]))
+	AC_MSG_ERROR([pkg-config could not find alsa; install libasound2-dev]))
 
 # Doxygen setup
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
