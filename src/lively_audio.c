@@ -79,6 +79,7 @@ static bool audio_configure_stream (
 	unsigned int *channels) {
 
 	int err;
+	bool found;
 	unsigned int channels_max;
 	unsigned int frames_per_second = audio->frames_per_second;
 	lively_app_t *app = audio->app;
@@ -105,19 +106,14 @@ static bool audio_configure_stream (
 	// This attempts to set the access type for this stream to one of the
 	// following configurations, in order.
 
-	bool found = false;
-	static snd_pcm_access_t supported_access_types[] = {
+	found = false;
+	static const snd_pcm_access_t supported[] = {
 		SND_PCM_ACCESS_MMAP_NONINTERLEAVED,
 		SND_PCM_ACCESS_MMAP_INTERLEAVED,
 		SND_PCM_ACCESS_MMAP_COMPLEX
 	};
-	size_t length = sizeof supported_access_types / sizeof *supported_access_types;
-
-	for (size_t i = 0; i < length; i++) {
-		err = snd_pcm_hw_params_set_access (handle, hw_params,
-			supported_access_types[i]);
-		lively_app_log (app, LIVELY_TRACE, "audio", "Tried with (%p, %p, %d)",
-			handle, hw_params, supported_access_types[i]);
+	for (size_t i = 0; i < (sizeof supported / sizeof *supported); i++) {
+		err = snd_pcm_hw_params_set_access (handle, hw_params, supported[i]);
 		if (err == 0) {
 			found = true;
 			break;
@@ -128,6 +124,9 @@ static bool audio_configure_stream (
 			"Could not get mmap-based access to %s stream", stream);
 		return false;
 	}
+
+	// This attemps to set the sampling rate for this stream to one of the
+	// following configurations, in order.
 
 	err = snd_pcm_hw_params_set_format (handle, hw_params,
 		SND_PCM_FORMAT_FLOAT_LE);
@@ -233,7 +232,7 @@ static bool audio_configure_duplex (lively_audio_t *audio) {
 
 bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 	int err;
-	const char *device = "default";
+	const char *device = "hw:0";
 
 	// Initialize fields
 	audio->app = app;
