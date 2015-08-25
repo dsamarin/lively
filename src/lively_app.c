@@ -7,6 +7,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "../config.h"
+
 #include "lively_app.h"
 #include "lively_audio.h"
 #include "lively_scene.h"
@@ -14,7 +16,8 @@
 #include "platform.h"
 
 bool lively_app_init (lively_app_t *app) {
-	lively_app_log (app, LIVELY_INFO, "main", "Starting lively");
+	lively_app_log (app, LIVELY_INFO, "main",
+		"%s <%s>", PACKAGE_STRING, PACKAGE_URL);
 
 	// Initialize members
 	app->running = false;

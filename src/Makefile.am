@@ -1,5 +1,5 @@
-AM_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Os
-AM_LDFLAGS = 
+AM_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Ofast
+AM_LDFLAGS =
 
 SUBDIRS = $(PLATFORM)
 DIST_SUBDIRS = $(PLATFORM_LIST)
@@ -16,5 +16,6 @@ lively_SOURCES = main.c \
 	lively_scene.c \
 	lively_scene.h
 
-lively_LDADD = $(PLATFORM)/libplatform.a
+lively_CFLAGS = $(AM_CFLAGS) $(ALSA_CFLAGS)
+lively_LDADD = $(PLATFORM)/libplatform.a $(ALSA_LIBS)
 lively_DEPENDENCIES = $(PLATFORM)/libplatform.a

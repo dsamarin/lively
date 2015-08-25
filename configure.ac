@@ -18,7 +18,13 @@ AC_PROG_CC
 AC_PROG_RANLIB
 
 # Checks for libraries
-AC_CHECK_LIB([jack], [jack_client_open])
+PKG_CHECK_MODULES([ALSA], alsa,
+	AC_CHECK_LIB([asound], [snd_pcm_open], [
+			AC_SUBST(ALSA_CFLAGS)
+			AC_SUBST(ALSA_LIBS)
+		],
+		AC_MSG_ERROR([alsa is not available on this system; install libasound2-dev])),
+	AC_MSG_ERROR([pkg-config could not find alsa]))
 
 # Doxygen setup
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
@@ -42,11 +48,10 @@ AC_SUBST([PLATFORM])
 AC_SUBST([PLATFORM_LIST])
 
 # Checks for header files
-AC_CHECK_HEADERS([stdlib.h])
-
+AC_CHECK_HEADERS([stdlib.h alsa/asoundlib.h])
 AC_CHECK_HEADER_STDBOOL
 
 #
-
+AC_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([Makefile src/Makefile src/linux/Makefile src/windows/Makefile])
 AC_OUTPUT
