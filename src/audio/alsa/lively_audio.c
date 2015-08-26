@@ -55,19 +55,19 @@ static void audio_handle_pcm_open_error(
 	int err) {
 
 	switch (err) {
-	case EBUSY:
+	case -EBUSY:
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"The %s device \"%s\" is already in use", stream, device);
 		break;
-	case EPERM:
+	case -EPERM:
 		lively_app_log (app, LIVELY_ERROR, "audio",
 			"You do not have permission to use %s device \"%s\"",
 			stream, device);
 		break;
 	default:
 		lively_app_log (app, LIVELY_ERROR, "audio",
-			"Unknown error attempting to open %s device \"%s\"",
-			stream, device);
+			"Unknown error attempting to open %s device \"%s\" (%s)",
+			stream, device, snd_strerror (err));
 	}
 }
 
@@ -257,9 +257,9 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 	backend->started = false;
 	backend->playback_channels = 0;
 	backend->capture_channels = 0;
-	backend->frames_per_second = 0;
-	backend->frames_per_period = 0;
-	backend->periods_per_buffer = 0;
+	backend->frames_per_second = 44100;
+	backend->frames_per_period = 512;
+	backend->periods_per_buffer = 2;
 
 	/*
 	 * 1. Open playback and capture handles
