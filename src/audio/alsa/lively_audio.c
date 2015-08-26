@@ -84,8 +84,32 @@ static bool audio_configure_stream (
 
 	int err;
 	bool found;
+	snd_pcm_uframes_t stop_threshold;
 	unsigned int channels_max;
+	unsigned int frames_per_period = backend->frames_per_period;
 	unsigned int frames_per_second = backend->frames_per_second;
+	unsigned int periods_per_buffer = backend->periods_per_buffer;
+
+	static const snd_pcm_access_t try_access[] = {
+		SND_PCM_ACCESS_MMAP_NONINTERLEAVED,
+		SND_PCM_ACCESS_MMAP_INTERLEAVED,
+		SND_PCM_ACCESS_MMAP_COMPLEX
+	};
+
+	static const struct {
+		snd_pcm_format_t pcm_format;
+		const char *id;
+	} try_formats[] = {
+		{SND_PCM_FORMAT_FLOAT_LE, "32bit float little-endian"},
+		{SND_PCM_FORMAT_S32_LE, "32bit integer little-endian"},
+		{SND_PCM_FORMAT_S32_BE, "32bit integer big-endian"},
+		{SND_PCM_FORMAT_S24_3LE, "24bit 3byte little-endian"},
+		{SND_PCM_FORMAT_S24_3BE, "24bit 3byte big-endian"},
+		{SND_PCM_FORMAT_S24_LE, "24bit little-endian"},
+		{SND_PCM_FORMAT_S24_BE, "24bit big-endian"},
+		{SND_PCM_FORMAT_S16_LE, "16bit little-endian"},
+		{SND_PCM_FORMAT_S16_BE, "16bit big-endian"}
+	};
 
 // This function narrows down the possible configurations for this
 	// stream by allowing all configurations and narrowing down based off
@@ -110,13 +134,8 @@ static bool audio_configure_stream (
 	// following configurations, in order.
 
 	found = false;
-	static const snd_pcm_access_t supported[] = {
-		SND_PCM_ACCESS_MMAP_NONINTERLEAVED,
-		SND_PCM_ACCESS_MMAP_INTERLEAVED,
-		SND_PCM_ACCESS_MMAP_COMPLEX
-	};
-	for (size_t i = 0; i < (sizeof supported / sizeof *supported); i++) {
-		err = snd_pcm_hw_params_set_access (handle, hw_params, supported[i]);
+	for (size_t i = 0; i < (sizeof try_access / sizeof *try_access); i++) {
+		err = snd_pcm_hw_params_set_access (handle, hw_params, try_access[i]);
 		if (err == 0) {
 			found = true;
 			break;
@@ -131,11 +150,22 @@ static bool audio_configure_stream (
 	// This attemps to set the sampling rate for this stream to one of the
 	// following configurations, in order.
 
-	err = snd_pcm_hw_params_set_format (handle, hw_params,
-		SND_PCM_FORMAT_FLOAT_LE);
-	if (err < 0) {
+	found = false;
+	for (size_t i = 0; i < (sizeof try_formats / sizeof *try_formats); i++) {
+		err = snd_pcm_hw_params_set_format (handle, hw_params, 
+			try_formats[i].pcm_format);
+		if (err == 0) {
+			lively_app_log (app, LIVELY_INFO, "audio",
+				"Setting sample format for %s stream to %s",
+				stream, try_formats[i].id);
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
 		lively_app_log (app, LIVELY_ERROR, "audio",
-			"Could not get 32-bit floating point audio support");
+			"Could not find supported sample format for %s stream",
+			stream);
 		return false;
 	}
 
@@ -146,6 +176,15 @@ static bool audio_configure_stream (
 			"Could not set sample rate to %u Hz for %s stream",
 			backend->frames_per_second, stream);
 		return false;
+	}
+	if (frames_per_second != backend->frames_per_second) {
+		lively_app_log (app, LIVELY_WARN, "audio",
+			"Setting sample rate to %u Hz instead of %u Hz on %s stream",
+			frames_per_second, backend->frames_per_second, stream);
+		backend->frames_per_second = frames_per_second;
+	} else {
+		lively_app_log (app, LIVELY_INFO, "audio",
+			"Setting sample rate to %u Hz on %s stream", frames_per_second, stream);
 	}
 
 	err = snd_pcm_hw_params_get_channels_max (hw_params, &channels_max);
@@ -172,11 +211,82 @@ static bool audio_configure_stream (
 		return false;
 	}
 
-	if (frames_per_second != backend->frames_per_second) {
-		lively_app_log (app, LIVELY_WARN, "audio",
-			"Setting sample rate to closest match %u Hz instead of %u Hz",
-			frames_per_second, backend->frames_per_second);
-		backend->frames_per_second = frames_per_second;
+	err = snd_pcm_hw_params_set_periods_min (handle, hw_params,
+		&periods_per_buffer, NULL);
+	if (periods_per_buffer < backend->periods_per_buffer) {
+		backend->periods_per_buffer = periods_per_buffer;
+	}
+	err = snd_pcm_hw_params_set_periods_near (handle, hw_params,
+		&periods_per_buffer, NULL);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set number of periods to %u for %s stream",
+			periods_per_buffer, stream);
+		return false;
+	}
+
+	if (periods_per_buffer < backend->periods_per_buffer) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could only get %u periods instead of %u for %s stream",
+			periods_per_buffer, backend->periods_per_buffer, stream);
+		return false;
+	}
+	lively_app_log (app, LIVELY_INFO, "audio",
+		"Setting periods to %u on %s stream", periods_per_buffer, stream);
+
+	err = snd_pcm_hw_params_set_buffer_size (handle, hw_params,
+		frames_per_period * periods_per_buffer);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set buffer length to %u for %s stream",
+			frames_per_period * periods_per_buffer, stream);
+		return false;
+	}
+
+	err = snd_pcm_hw_params (handle, hw_params);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set hardware parameters for %s stream", stream);
+		return false;
+	}
+
+	snd_pcm_sw_params_current (handle, sw_params);
+	
+	err = snd_pcm_sw_params_set_start_threshold (handle, sw_params, 0U);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set start mode for %s stream", stream);
+		return false;
+	}
+
+	stop_threshold = periods_per_buffer * frames_per_period;
+	err = snd_pcm_sw_params_set_stop_threshold (handle, sw_params,
+		stop_threshold);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set stop mode for %s stream", stream);
+		return false;
+	}
+
+	err = snd_pcm_sw_params_set_silence_threshold (handle, sw_params, 0);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set silence threshold for %s stream", stream);
+		return false;
+	}
+
+	err = snd_pcm_sw_params_set_avail_min (handle, sw_params, frames_per_period);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set available minimum for %s stream", stream);
+		return false;
+	}
+
+	err = snd_pcm_sw_params (handle, sw_params);
+	if (err < 0) {
+		lively_app_log (app, LIVELY_ERROR, "audio",
+			"Could not set software parameters for %s stream");
+		return false;
 	}
 
 	*channels = channels_max;
