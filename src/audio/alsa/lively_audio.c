@@ -247,6 +247,7 @@ bool lively_audio_init (lively_audio_t *audio, lively_app_t *app) {
 
 	// Initialize fields
 	audio->app = app;
+	audio->backend = backend;
 	backend->handle_capture = NULL;
 	backend->handle_playback = NULL;
 	backend->playback_hw_params = NULL;
