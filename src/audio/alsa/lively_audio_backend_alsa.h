@@ -9,7 +9,7 @@
 #undef ALSA_PCM_NEW_SW_PARAMS_API
 #undef _POSIX_C_SOURCE
 
-#include "../../lively_audio.h"
+#include "../../lively_audio_backend.h"
 
 typedef struct lively_audio_backend {
 	snd_pcm_t *handle_playback;
@@ -19,13 +19,16 @@ typedef struct lively_audio_backend {
 	snd_pcm_hw_params_t *capture_hw_params;
 	snd_pcm_sw_params_t *capture_sw_params;
 
-	bool started;
+	bool connected;
 	unsigned int playback_channels;
 	unsigned int capture_channels;
 
 	unsigned int frames_per_second;
 	unsigned int frames_per_period;
 	unsigned int periods_per_buffer;
+
+	lively_audio_backend_logger_callback_t logger;
+	void *logger_data;
 } lively_audio_backend_t;
 
 #endif

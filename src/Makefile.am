@@ -1,62 +1,67 @@
-AM_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Ofast
-AM_LDFLAGS =
-
-bin_PROGRAMS = lively
+LIVELY_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Ofast -pthread
+LIVELY_LIBS = -lpthread
 
 common_sources = \
 	main.c \
 	platform.h \
+	lively_audio.c \
 	lively_audio.h \
+	lively_audio_backend.h \
 	lively_app.c \
 	lively_app.h \
 	lively_node.c \
 	lively_node.h \
 	lively_scene.c \
-	lively_scene.h
+	lively_scene.h \
+	lively_thread.c \
+	lively_thread.h
 
-os_linux_sources = \
+linux_sources = \
 	platform/linux/signals.c \
 	platform/linux/utils.c
 
-os_windows_sources = \
+windows_sources = \
 	platform/windows/signals.c \
 	platform/windows/utils.c
 
-audio_alsa_sources = \
-	audio/alsa/lively_audio.c
+alsa_sources = audio/alsa/lively_audio_backend.c
+jack_sources = audio/jack/lively_audio_backend.c
+asio_sources = audio/asio/lively_audio_backend.c
 
-audio_jack_sources = \
-	audio/jack/lively_audio.c
-
-audio_asio_sources = \
-	audio/asio/lively_audio.c
-
-lively_SOURCES = $(common_sources)
-lively_CFLAGS = $(AM_CFLAGS)
-
-#
-# Platform configuration
-#
-if OS_LINUX
-lively_SOURCES += $(os_linux_sources)
-endif
-if OS_WINDOWS
-lively_SOURCES += $(os_windows_sources)
-endif
-
-#
-# Audio API configuration
-#
 if USE_ALSA
-lively_SOURCES += $(audio_alsa_sources)
-lively_CFLAGS += $(ALSA_CFLAGS)
-lively_LDADD = $(ALSA_LIBS)
+lively_alsa = lively_alsa
+else
+lively_alsa =
 endif
+
 if USE_JACK
-lively_SOURCES += $(audio_jack_sources)
-lively_CFLAGS += $(JACK_CFLAGS)
-lively_LDADD = $(JACK_LIBS)
+lively_jack = lively_jack
+else
+lively_jack =
 endif
+
 if USE_ASIO
-lively_SOURCES += $(audio_asio_sources)
+lively_asio = lively_asio
+else
+lively_asio =
 endif
+
+if OS_WINDOWS
+platform_sources = $(windows_sources)
+else
+platform_sources = $(linux_sources)
+endif
+
+bin_PROGRAMS = $(lively_alsa) $(lively_jack) $(lively_asio)
+
+lively_alsa_SOURCES = $(common_sources) $(platform_sources) $(alsa_sources)
+lively_alsa_CFLAGS = $(LIVELY_CFLAGS) $(ALSA_CFLAGS)
+lively_alsa_LDADD = $(LIVELY_LIBS) $(ALSA_LIBS)
+
+lively_jack_SOURCES = $(common_sources) $(platform_sources) $(jack_sources)
+lively_jack_CFLAGS = $(LIVELY_CFLAGS) $(JACK_CFLAGS)
+lively_jack_LDADD = $(LIVELY_LIBS) $(JACK_LIBS)
+
+lively_asio_SOURCES = $(common_sources) $(platform_sources) $(asio_sources)
+lively_asio_CFLAGS = $(LIVELY_CFLAGS) $(ASIO_CFLAGS)
+lively_asio_LDADD = $(LIVELY_LIBS) $(ASIO_LIBS)

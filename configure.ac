@@ -37,6 +37,7 @@ have_alsa=no
 if test "$with_alsa" = "yes"; then
 	PKG_CHECK_MODULES([ALSA], alsa, [
 			have_alsa=yes
+			AC_SUBST(ALSA_CFLAGS)
 			AC_SUBST(ALSA_LIBS)
 		])
 fi
@@ -46,6 +47,7 @@ have_jack=no
 if test "$with_jack" = "yes"; then
 	PKG_CHECK_MODULES([JACK], jack, [
 			have_jack=yes
+			AC_SUBST(JACK_CFLAGS)
 			AC_SUBST(JACK_LIBS)
 		])
 fi

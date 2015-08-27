@@ -1,10 +1,10 @@
 #ifndef LIVELY_APP_H
 #define LIVELY_APP_H
 
+#include <stdarg.h>
 #include <stdbool.h>
 
-#include "lively_audio.h"
-#include "lively_scene.h"
+#include "lively_thread.h"
 
 /**
  * Specifies the level used for logging messages within lively.
@@ -25,16 +25,29 @@ enum lively_log_level {
 };
 
 typedef struct lively_app {
-	struct lively_audio audio;
-	struct lively_scene scene;
 	bool running;
+	lively_thread_t thread_audio;
+	lively_thread_t thread_disk;
+	lively_thread_t thread_server;
 } lively_app_t;
 
-bool lively_app_init (lively_app_t *);
+void lively_app_init (lively_app_t *);
 void lively_app_destroy (lively_app_t *);
 void lively_app_run (lively_app_t *);
 void lively_app_stop (lively_app_t *);
 
-void lively_app_log (lively_app_t *, enum lively_log_level, const char *group, const char *fmt, ...);
+void lively_app_log (
+	lively_app_t *,
+	enum lively_log_level,
+	const char *group,
+	const char *fmt, ...);
+
+void lively_app_log_va (
+	lively_app_t *,
+	enum lively_log_level,
+	const char *group,
+	const char *fmt,
+	va_list);
+
 
 #endif

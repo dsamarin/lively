@@ -9,32 +9,24 @@
 
 #include "../config.h"
 
+#include "lively_thread.h"
 #include "lively_app.h"
 #include "lively_audio.h"
 #include "lively_scene.h"
 
 #include "platform.h"
 
-bool lively_app_init (lively_app_t *app) {
+void lively_app_init (lively_app_t *app) {
 	lively_app_log (app, LIVELY_INFO, "main",
 		"%s <%s>", PACKAGE_STRING, PACKAGE_URL);
 
 	// Initialize members
 	app->running = false;
-
-	// Start submodules
-	if (!lively_audio_init (&app->audio, app)) {
-		return false;
-	}
-
-	return true;
 }
 void lively_app_destroy (lively_app_t *app) {
 	if (app->running) {
 		lively_app_stop (app);
 	}
-
-	lively_audio_destroy (&app->audio);
 }
 void lively_app_run (lively_app_t *app) {
 	if (app->running) {
@@ -43,17 +35,16 @@ void lively_app_run (lively_app_t *app) {
 
 	lively_app_log (app, LIVELY_INFO, "main", "Running lively");
 
-	lively_scene_init (&app->scene, app);
-	
-	if (!lively_audio_start (&app->audio)) {
+	// Start submodules
+	if (!lively_thread_init (
+		&app->thread_audio, app,
+		lively_audio_main)) {
 		return;
 	}
 
 	app->running = true;
-	platform_pause ();
-
-	lively_audio_stop (&app->audio);
-	lively_scene_destroy (&app->scene);
+	lively_thread_join_multiple (&app->thread_audio, NULL);
+	app->running = false;
 }
 void lively_app_stop (lively_app_t *app) {
 	if (!app->running) {
@@ -62,8 +53,9 @@ void lively_app_stop (lively_app_t *app) {
 
 	lively_app_log (app, LIVELY_INFO, "main", "Stopping lively");
 
-	app->running = false;
-	lively_audio_stop (&app->audio);
+	lively_thread_set_state_multiple (THREAD_STOP, 
+		&app->thread_audio,
+		NULL);
 }
 
 /**
@@ -97,6 +89,18 @@ void lively_app_log (
 
 	va_list args;
 
+	va_start (args, fmt);
+	lively_app_log_va (app, level, group, fmt, args);
+	va_end (args);
+}
+
+void lively_app_log_va (
+	lively_app_t *app,
+	enum lively_log_level level,
+	const char *group,
+	const char *fmt,
+	va_list args) {
+
 	static const struct {
 		FILE** file;
 		const char *name;
@@ -116,10 +120,7 @@ void lively_app_log (
 		options[level].color,
 		options[level].name);
 
-	va_start (args, fmt);
 	vfprintf (*options[level].file, fmt, args);
-	va_end (args);
-
 	putchar ('\n');
 
 	// If we have a fatal error, we should shutdown cleanly.

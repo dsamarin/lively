@@ -11,8 +11,7 @@
 static lively_app_t lively;
 
 static void shutdown (void) {
-	lively_app_destroy (&lively);
-	exit (0);
+	lively_app_stop (&lively);
 }
 
 /**
@@ -27,10 +26,9 @@ static void shutdown (void) {
 int main(void) {
 	platform_register_exit (&shutdown);
 
-	if (lively_app_init (&lively)) {
-		lively_app_run (&lively);
-		lively_app_destroy (&lively);
-	}
+	lively_app_init (&lively);
+	lively_app_run (&lively);
+	lively_app_destroy (&lively);
 
 	return 0;
 }
