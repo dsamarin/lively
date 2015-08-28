@@ -23,8 +23,6 @@ void lively_audio_main (lively_thread_t *thread) {
 	lively_audio_config_t config;
 	lively_audio_backend_t *backend;
 
-	lively_thread_name (thread, module);
-
 	lively_audio_config_init (&config);
 	latency = lively_audio_config_get_latency (&config);
 	lively_app_log (thread->app, LIVELY_INFO, module,

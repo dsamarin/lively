@@ -1,6 +1,5 @@
 #include <stdarg.h>
 
-#define _GNU_SOURCE
 #include <pthread.h>
 
 #include <stdio.h>
@@ -64,10 +63,6 @@ void
 lively_thread_set_state (lively_thread_t *thread, lively_thread_state_t state) {
 	// #atomic store
 	thread->state = state;
-}
-
-void lively_thread_name (lively_thread_t *thread, const char *name) {
-	pthread_setname_np (thread->pthread, name);
 }
 
 /**
