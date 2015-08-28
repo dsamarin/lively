@@ -34,7 +34,7 @@ typedef struct lively_app {
 void lively_app_init (lively_app_t *);
 void lively_app_destroy (lively_app_t *);
 void lively_app_run (lively_app_t *);
-void lively_app_stop (lively_app_t *);
+void lively_app_shutdown (lively_app_t *);
 
 void lively_app_log (
 	lively_app_t *,

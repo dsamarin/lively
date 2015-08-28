@@ -11,7 +11,7 @@
 static lively_app_t lively;
 
 static void shutdown (void) {
-	lively_app_stop (&lively);
+	lively_app_shutdown (&lively);
 }
 
 /**

@@ -10,6 +10,14 @@ static const char *module = "audio";
 static void
 audio_logger (void *user, enum lively_log_level level, const char *fmt, ...);
 
+/**
+* The main function for the Lively audio component.
+*
+* This function begins by initializing the configuration structure and creating
+* a new audio backend.
+*
+* @param thread The Lively Thread
+*/
 void lively_audio_main (lively_thread_t *thread) {
 	float latency;
 	lively_audio_config_t config;

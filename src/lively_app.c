@@ -16,18 +16,45 @@
 
 #include "platform.h"
 
+/**
+* Initializes a Lively Application.
+*
+* @param app The Lively Application
+*/
 void lively_app_init (lively_app_t *app) {
 	lively_app_log (app, LIVELY_INFO, "main",
 		"%s <%s>", PACKAGE_STRING, PACKAGE_URL);
 
-	// Initialize members
 	app->running = false;
 }
+
+/**
+* Destroys a Lively Application
+*
+* This function will stop the Lively Application if it is already running.
+*
+* @param app The Lively Application
+*/
 void lively_app_destroy (lively_app_t *app) {
 	if (app->running) {
-		lively_app_stop (app);
+		lively_app_shutdown (app);
 	}
 }
+
+/**
+* The main routine for a Lively Application
+*
+* This function prints log messages signaling the status change of the Lively
+* Application.
+*
+* The function is designed to initialize, in separate threads, each of the
+* core components required to run the Lively system. The function will block
+* until each component has been terminated. The function #lively_app_stop can
+* be used asyncronously in a signal handler or separate thread to shut down the
+* Lively system and unblock this function.
+*
+* @param app The Lively Application
+*/
 void lively_app_run (lively_app_t *app) {
 	if (app->running) {
 		return;
@@ -45,13 +72,25 @@ void lively_app_run (lively_app_t *app) {
 	app->running = true;
 	lively_thread_join_multiple (&app->thread_audio, NULL);
 	app->running = false;
+
+	lively_app_log (app, LIVELY_INFO, "main", "Stopping lively");
 }
-void lively_app_stop (lively_app_t *app) {
+
+/**
+* Shuts down the Lively system
+*
+* This function signals to each of the core components that make up the Lively
+* system to shutdown. Each thread will terminate, causing the function
+* #lively_app_run to return.
+*
+* This function does nothing if the Lively application is not running.
+*
+* @param app The Lively Application
+*/
+void lively_app_shutdown (lively_app_t *app) {
 	if (!app->running) {
 		return;
 	}
-
-	lively_app_log (app, LIVELY_INFO, "main", "Stopping lively");
 
 	lively_thread_set_state_multiple (THREAD_STOP, 
 		&app->thread_audio,
@@ -75,6 +114,8 @@ void lively_app_stop (lively_app_t *app) {
 * lively:<group> <level> <message>
 * </code>
 *
+* @todo Make this function thread-safe.
+*
 * @param app A reference to the currently running application
 * @param level The type of message this is
 * @param group The module within Lively that generated the message
@@ -94,6 +135,17 @@ void lively_app_log (
 	va_end (args);
 }
 
+/**
+* Logs an event that pertains to Lively (variadic).
+*
+* @see lively_app_log()
+*
+* @param app
+* @param level
+* @param group
+* @param fmt
+* @param args
+*/
 void lively_app_log_va (
 	lively_app_t *app,
 	enum lively_log_level level,
