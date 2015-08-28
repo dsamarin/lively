@@ -238,14 +238,14 @@ static bool audio_configure_stream (
 	unsigned int *channels;
 
 	if (stream == AUDIO_CAPTURE) {
-		name = "capture";
+		name = "Capture";
 		handle = backend->handle_capture;
 		hw = backend->capture_hw_params;
 		sw = backend->capture_sw_params;
 		channels = &config->channels_in;
 		periods_per_buffer = &config->periods_per_buffer_in;
 	} else if (stream == AUDIO_PLAYBACK) {
-		name = "playback";
+		name = "Playback";
 		handle = backend->handle_playback;
 		hw = backend->playback_hw_params;
 		sw = backend->playback_sw_params;
@@ -283,15 +283,14 @@ static bool audio_configure_stream (
 	err = snd_pcm_hw_params_any (handle, hw);
 	if (err < 0) {
 		log_error (backend,
-			"Could not initialize hardware params structure (%s)",
-			snd_strerror (err));
+			"%s stream: Could not initialize hardware params structure", name);
 		return false;
 	}
 
 	err = snd_pcm_hw_params_set_periods_integer (handle, hw);
 	if (err < 0) {
 		log_error (backend,
-			"Could not restrict period size to integer value");
+			"%s stream: Could not restrict period size to integer value", name);
 		return false;
 	}
 
@@ -308,7 +307,7 @@ static bool audio_configure_stream (
 		}
 		if (!found) {
 			log_error (backend,
-				"Could not get mmap-based access to %s stream", name);
+				"%s stream: Could not get mmap-based access", name);
 			return false;
 		}
 	}
@@ -322,7 +321,7 @@ static bool audio_configure_stream (
 				try_formats[i].pcm_format);
 			if (err == 0) {
 				log_info (backend,
-					"Setting sample format for %s stream to %s",
+					"%s stream: Setting format to %s",
 					name, try_formats[i].id);
 				found = true;
 				break;
@@ -330,7 +329,7 @@ static bool audio_configure_stream (
 		}
 		if (!found) {
 			log_error (backend,
-				"Could not find supported sample format for %s stream",
+				"%s stream: Could not find supported format",
 				name);
 			return false;
 		}
@@ -340,25 +339,25 @@ static bool audio_configure_stream (
 		&frames_per_second, NULL);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set sample rate to %u Hz for %s stream",
-			config->frames_per_second, name);
+			"%s stream: Could not set sample rate to %u Hz",
+			name, config->frames_per_second);
 		return false;
 	}
 	if (frames_per_second != config->frames_per_second) {
 		log_warn (backend,
-			"Setting sample rate to %u Hz instead of %u Hz on %s stream",
-			frames_per_second, config->frames_per_second, name);
+			"%s stream: Setting sample rate to %u Hz instead of %u Hz",
+			name, frames_per_second, config->frames_per_second);
 		config->frames_per_second = frames_per_second;
 	} else {
 		log_info (backend,
-			"Setting sample rate to %u Hz on %s stream", frames_per_second, name);
+			"%s stream: Setting sample rate to %u Hz", name, frames_per_second);
 	}
 
 	if (*channels == 0) {
 		err = snd_pcm_hw_params_get_channels_max (hw, channels);
 		if (err < 0) {
 			log_error (backend,
-				"Could not get maximum channel count available for %s stream",
+				"%s stream: Could not get maximum channel count available",
 				name);
 			return false;
 		}
@@ -367,7 +366,7 @@ static bool audio_configure_stream (
 	err = snd_pcm_hw_params_set_channels (handle, hw, *channels);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set channel count for %s stream", name);
+			"%s stream: Could not set channel count to %u", name, *channels);
 		return false;
 	}
 
@@ -375,8 +374,8 @@ static bool audio_configure_stream (
 		config->frames_per_period, 0);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set period size to %u frames for %s stream",
-			config->frames_per_period, name);
+			"%s stream: Could not set period size to %u frames",
+			name, config->frames_per_period);
 		return false;
 	}
 
@@ -392,31 +391,31 @@ static bool audio_configure_stream (
 		periods_per_buffer, NULL);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set number of periods to %u for %s stream",
-			periods_per_buffer, name);
+			"%s stream: Could not set number of periods to %u",
+			name, periods_per_buffer);
 		return false;
 	}
 	if (*periods_per_buffer < config->periods_per_buffer) {
 		log_error (backend,
-			"Could only get %u periods instead of %u for %s stream",
-			*periods_per_buffer, config->periods_per_buffer, name);
+			"%s stream: Could only get %u periods instead of %u",
+			name, *periods_per_buffer, config->periods_per_buffer);
 		return false;
 	}
 	log_info (backend,
-		"Setting periods to %u on %s stream", *periods_per_buffer, name);
+		"%s stream: Setting periods to %u", name, *periods_per_buffer);
 
 	unsigned int buffer_size = config->frames_per_period * (*periods_per_buffer);
 	err = snd_pcm_hw_params_set_buffer_size (handle, hw, buffer_size);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set buffer length to %u for %s stream", buffer_size, name);
+			"%s stream: Could not set buffer length to %u", name, buffer_size);
 		return false;
 	}
 
 	err = snd_pcm_hw_params (handle, hw);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set hardware parameters for %s stream", name);
+			"%s stream: Could not set hardware parameters", name);
 		return false;
 	}
 
@@ -426,7 +425,7 @@ static bool audio_configure_stream (
 	err = snd_pcm_sw_params_set_start_threshold (handle, sw, start_threshold);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set start mode for %s stream", name);
+			"%s stream: Could not set start threshold", name);
 		return false;
 	}
 
@@ -434,7 +433,7 @@ static bool audio_configure_stream (
 	err = snd_pcm_sw_params_set_stop_threshold (handle, sw, stop_threshold);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set stop mode for %s stream", name);
+			"%s stream: Could not set stop threshold", name);
 		return false;
 	}
 
@@ -442,7 +441,7 @@ static bool audio_configure_stream (
 	err = snd_pcm_sw_params_set_silence_threshold (handle, sw, silence_threshold);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set silence threshold for %s stream", name);
+			"%s stream: Could not set silence threshold", name);
 		return false;
 	}
 
@@ -456,14 +455,14 @@ static bool audio_configure_stream (
 	err = snd_pcm_sw_params_set_avail_min (handle, sw, avail_min);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set available minimum for %s stream", name);
+			"%s stream: Could not set available minimum", name);
 		return false;
 	}
 
 	err = snd_pcm_sw_params (handle, sw);
 	if (err < 0) {
 		log_error (backend,
-			"Could not set software parameters for %s stream");
+			"%s stream: Could not set software parameters", name);
 		return false;
 	}
 
