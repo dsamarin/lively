@@ -1,6 +1,7 @@
 #include "lively_app.h"
 #include "lively_audio.h"
 #include "lively_audio_backend.h"
+#include "lively_audio_config.h"
 
 #include "platform.h"
 
@@ -10,11 +11,18 @@ static void
 audio_logger (void *user, enum lively_log_level level, const char *fmt, ...);
 
 void lively_audio_main (lively_thread_t *thread) {
+	float latency;
+	lively_audio_config_t config;
 	lively_audio_backend_t *backend;
 
 	lively_thread_name (thread, module);
 
-	backend = lively_audio_backend_new ();
+	lively_audio_config_init (&config);
+	latency = lively_audio_config_get_latency (&config);
+	lively_app_log (thread->app, LIVELY_INFO, module,
+		"Audio is configured for latency of %.2fms", latency * 1000.0);
+
+	backend = lively_audio_backend_new (&config);
 	if (!backend) {
 		lively_app_log (thread->app, LIVELY_FATAL, module,
 			"Could not allocate audio backend");

@@ -7,6 +7,8 @@ common_sources = \
 	lively_audio.c \
 	lively_audio.h \
 	lively_audio_backend.h \
+	lively_audio_config.c \
+	lively_audio_config.h \
 	lively_app.c \
 	lively_app.h \
 	lively_node.c \
