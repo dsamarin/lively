@@ -11,9 +11,6 @@ AM_INIT_AUTOMAKE([subdir-objects])
 
 AC_CONFIG_SRCDIR([src/main.c])
 
-AC_CANONICAL_HOST
-PKG_PROG_PKG_CONFIG
-
 # Specify options
 AC_ARG_WITH([alsa],
 	AS_HELP_STRING([--with-alsa], [Enable support for ALSA]),
@@ -31,6 +28,18 @@ case "$host" in
 	*mingw*) os_windows=yes ;;
 	*) os_linux=yes ;;
 esac
+
+# Sanity check
+if test "$with_asio" != "yes" \
+	&& test "$with_alsa" != "yes" \
+	&& test "$with_jack" != "yes"; then
+
+	AC_MSG_NOTICE([*** No audio backend was specified. Enabling --with-alsa ***])
+	with_alsa=yes
+fi
+
+AC_CANONICAL_HOST
+PKG_PROG_PKG_CONFIG
 
 # Checks for ALSA support
 have_alsa=no
@@ -55,15 +64,7 @@ fi
 # Checks for ASIO support
 have_asio=no
 if test "$with_asio" = "yes"; then
-	AC_MSG_ERROR([ASIO support is not implemented yet.])
-fi
-
-# Sanity check
-if test "$have_asio" = "no" \
-	&& test "$have_alsa" = "no" \
-	&& test "$have_jack" = "no"; then
-
-	AC_MSG_ERROR([An audio backend must be specified, see --help.])
+	AC_MSG_ERROR([*** ASIO support is not implemented yet. ***])
 fi
 
 # Checks for programs
