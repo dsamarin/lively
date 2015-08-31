@@ -211,6 +211,18 @@ static bool audio_configure (lively_audio_backend_t *backend) {
 	}
 
 	if (config->stream & (AUDIO_CAPTURE | AUDIO_PLAYBACK)) {
+		// Frame rates must match in duplex mode.
+		unsigned int rate_playback, rate_capture;
+		snd_pcm_hw_params_get_rate (
+			backend->capture_hw_params, &rate_capture, NULL);
+		snd_pcm_hw_params_get_rate (
+			backend->playback_hw_params, &rate_playback, NULL);
+		if (rate_playback != rate_capture) {
+			log_error (backend,
+				"Sample rates for playback and capture streams do not match");
+			return false;
+		}
+
 		if (snd_pcm_link (backend->handle_playback, backend->handle_capture)) {
 			log_error (backend,
 				"Could not link capture and playback handles");
