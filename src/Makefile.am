@@ -1,5 +1,4 @@
-LIVELY_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -Ofast -pthread
-LIVELY_LIBS = -lpthread
+AM_CFLAGS = -std=c11 -pedantic -pedantic-errors -Wall -Werror -flto -Ofast -pthread
 
 common_sources = \
 	main.c \
@@ -57,13 +56,13 @@ endif
 bin_PROGRAMS = $(lively_alsa) $(lively_jack) $(lively_asio)
 
 lively_alsa_SOURCES = $(common_sources) $(platform_sources) $(alsa_sources)
-lively_alsa_CFLAGS = $(LIVELY_CFLAGS) $(ALSA_CFLAGS)
-lively_alsa_LDADD = $(LIVELY_LIBS) $(ALSA_LIBS)
+lively_alsa_CFLAGS = $(AM_CFLAGS) $(ALSA_CFLAGS)
+lively_alsa_LDADD = $(ALSA_LIBS)
 
 lively_jack_SOURCES = $(common_sources) $(platform_sources) $(jack_sources)
-lively_jack_CFLAGS = $(LIVELY_CFLAGS) $(JACK_CFLAGS)
-lively_jack_LDADD = $(LIVELY_LIBS) $(JACK_LIBS)
+lively_jack_CFLAGS = $(AM_CFLAGS) $(JACK_CFLAGS)
+lively_jack_LDADD = $(JACK_LIBS)
 
 lively_asio_SOURCES = $(common_sources) $(platform_sources) $(asio_sources)
-lively_asio_CFLAGS = $(LIVELY_CFLAGS) $(ASIO_CFLAGS)
-lively_asio_LDADD = $(LIVELY_LIBS) $(ASIO_LIBS)
+lively_asio_CFLAGS = $(AM_CFLAGS) $(ASIO_CFLAGS)
+lively_asio_LDADD = $(ASIO_LIBS)
