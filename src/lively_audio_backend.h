@@ -25,4 +25,12 @@ lively_audio_backend_set_logger (
 bool lively_audio_backend_connect (lively_audio_backend_t *);
 bool lively_audio_backend_disconnect (lively_audio_backend_t *);
 
+bool lively_audio_backend_start (lively_audio_backend_t *);
+bool lively_audio_backend_stop (lively_audio_backend_t *);
+
+bool lively_audio_backend_wait (lively_audio_backend_t *);
+
+bool lively_audio_backend_read (lively_audio_backend_t *);
+bool lively_audio_backend_write (lively_audio_backend_t *);
+
 #endif

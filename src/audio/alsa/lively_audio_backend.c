@@ -153,6 +153,31 @@ lively_audio_backend_disconnect (lively_audio_backend_t *backend) {
 	return true;
 }
 
+bool
+lively_audio_backend_start (lively_audio_backend_t *backend) {
+	return true;
+}
+
+bool
+lively_audio_backend_stop (lively_audio_backend_t *backend) {
+	return true;
+}
+
+bool
+lively_audio_backend_wait (lively_audio_backend_t *backend) {
+	return true;
+}
+
+bool
+lively_audio_backend_read (lively_audio_backend_t *backend) {
+	return true;
+}
+
+bool
+lively_audio_backend_write (lively_audio_backend_t *backend) {
+	return true;
+}
+
 static void audio_handle_pcm_open_error(
 	lively_audio_backend_t *backend,
 	const char *device,

@@ -17,7 +17,7 @@ typedef struct lively_thread {
 	pthread_t pthread;
 	void (*main)(struct lively_thread *);
 
-	int state; // #atomic
+	volatile int state; // #atomic
 } lively_thread_t;
 
 bool lively_thread_init (

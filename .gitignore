@@ -1,8 +1,10 @@
 # autotools
 Makefile
 Makefile.in
+Doxyfile
 configure
 .deps/
+.dirstamp
 aclocal.m4
 autom4te.cache/
 compile
@@ -11,3 +13,8 @@ depcomp
 install-sh
 missing
 stamp-h1
+
+
+# object files/executables
+*.o
+/src/lively_*
