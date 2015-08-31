@@ -42,6 +42,7 @@ lively_audio_backend_new (lively_audio_config_t *config) {
 	backend->capture_hw_params = NULL;
 	backend->capture_sw_params = NULL;
 
+	backend->linked = false;
 	backend->connected = false;
 
 	backend->logger = NULL;
@@ -155,6 +156,27 @@ lively_audio_backend_disconnect (lively_audio_backend_t *backend) {
 
 bool
 lively_audio_backend_start (lively_audio_backend_t *backend) {
+	int err;
+	lively_audio_config_t *config = backend->config;
+
+	if (config->stream & AUDIO_CAPTURE) {
+		err = snd_pcm_prepare (backend->handle_capture);
+		if (err < 0) {
+			log_error (backend, "Could not prepare capture stream");
+			return false;
+		}
+	}
+
+	if (config->stream & AUDIO_PLAYBACK) {
+		if (!backend->linked || !(config->stream & AUDIO_CAPTURE)) {
+			err = snd_pcm_prepare (backend->handle_playback);
+			if (err < 0) {
+				log_error (backend, "Could not prepare playback stream");
+				return false;
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -249,9 +271,9 @@ static bool audio_configure (lively_audio_backend_t *backend) {
 		}
 
 		if (snd_pcm_link (backend->handle_playback, backend->handle_capture)) {
-			log_error (backend,
-				"Could not link capture and playback handles");
-			return false;
+			backend->linked = false;
+		} else {
+			backend->linked = true;
 		}
 	}
 

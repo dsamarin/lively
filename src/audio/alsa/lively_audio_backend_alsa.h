@@ -21,6 +21,7 @@ typedef struct lively_audio_backend {
 	snd_pcm_hw_params_t *capture_hw_params;
 	snd_pcm_sw_params_t *capture_sw_params;
 
+	bool linked;
 	bool connected;
 
 	lively_audio_backend_logger_callback_t logger;
