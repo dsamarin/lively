@@ -216,6 +216,10 @@ static void audio_handle_pcm_open_error(
 			"You do not have permission to use %s device \"%s\"",
 			stream, device);
 		break;
+	case -ENOENT:
+		log_error (backend,
+			"The %s device named \"%s\" does not exist", stream, device);
+		break;
 	default:
 		log_error (backend,
 			"Unknown error attempting to open %s device \"%s\" (%s)",
