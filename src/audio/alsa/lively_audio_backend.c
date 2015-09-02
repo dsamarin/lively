@@ -192,14 +192,6 @@ lively_audio_backend_start (lively_audio_backend_t *backend) {
 			snd_pcm_poll_descriptors_count (backend->playback);
 	}
 
-	unsigned int poll_fds_count =
-		backend->poll_fds_count_capture + backend->poll_fds_count_playback;
-	backend->poll_fds = malloc (poll_fds_count * (sizeof *backend->poll_fds));
-	if (!backend->poll_fds) {
-		log_error (backend, "Could not allocate memory for audio poll descriptors");
-		return false;
-	}
-
 	if (config->stream & AUDIO_PLAYBACK) {
 		if (!audio_silence_all (backend)) {
 			return false;
@@ -220,6 +212,14 @@ lively_audio_backend_start (lively_audio_backend_t *backend) {
 				return false;
 			}
 		}
+	}
+
+	unsigned int poll_fds_count =
+		backend->poll_fds_count_capture + backend->poll_fds_count_playback;
+	backend->poll_fds = malloc (poll_fds_count * (sizeof *backend->poll_fds));
+	if (!backend->poll_fds) {
+		log_error (backend, "Could not allocate memory for audio poll descriptors");
+		return false;
 	}
 
 	return true;
