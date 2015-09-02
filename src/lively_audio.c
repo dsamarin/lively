@@ -22,6 +22,7 @@ void lively_audio_main (lively_thread_t *thread) {
 	float latency;
 	lively_audio_config_t config;
 	lively_audio_backend_t *backend;
+	lively_audio_block_t block;
 
 	if (lively_thread_get_state (thread) == THREAD_STOP)
 		return;
@@ -38,27 +39,40 @@ void lively_audio_main (lively_thread_t *thread) {
 		return;
 	}
 
+	lively_app_log (thread->app, LIVELY_INFO, module,
+		"Starting audio (%s)", lively_audio_backend_name (backend));
+
+
 	lively_audio_backend_set_logger (backend, audio_logger, thread->app);
 	
 	if (lively_audio_backend_connect (backend)) {
-		lively_app_log (thread->app, LIVELY_INFO, module,
-			"Starting audio (%s backend)", lively_audio_backend_name (backend));
 
-		if (lively_audio_backend_start (backend)) {
-			while (lively_audio_backend_wait (backend)) {
-				lively_audio_backend_read (backend);
-				lively_audio_backend_write (backend);
+		if (!lively_audio_block_init (&block, &config)) {
+			lively_app_log (thread->app, LIVELY_ERROR, module,
+				"Could not allocate audio channel block structure");
+		} else {
 
-				if (lively_thread_get_state (thread) == THREAD_STOP)
-					break;
+			lively_audio_block_silence_output (&block);
+			if (lively_audio_backend_start (backend, &block)) {
+				while (lively_audio_backend_wait (backend)) {
+					lively_audio_backend_read (backend, &block);
+					lively_audio_backend_write (backend, &block);
+
+					if (lively_thread_get_state (thread) == THREAD_STOP)
+						break;
+				}
+				lively_audio_backend_stop (backend);
 			}
-			lively_app_log (thread->app, LIVELY_INFO, module, "Stopping audio");
-			lively_audio_backend_stop (backend);
+
 		}
+
+		lively_audio_block_destroy (&block);
 		lively_audio_backend_disconnect (backend);
 	}
 
 	lively_audio_backend_delete (&backend);
+
+	lively_app_log (thread->app, LIVELY_INFO, module, "Stopping audio");
 }
 
 static void

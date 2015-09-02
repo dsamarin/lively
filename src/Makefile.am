@@ -25,9 +25,20 @@ windows_sources = \
 	platform/windows/signals.c \
 	platform/windows/utils.c
 
-alsa_sources = audio/alsa/lively_audio_backend.c
-jack_sources = audio/jack/lively_audio_backend.c
-asio_sources = audio/asio/lively_audio_backend.c
+audio_sources = \
+	audio/lively_audio_block.c
+
+alsa_sources = \
+	$(audio_sources) \
+	audio/alsa/lively_audio_backend.c
+
+jack_sources = \
+	$(audio_sources) \
+	audio/jack/lively_audio_backend.c
+
+asio_sources = \
+	$(audio_sources) \
+	audio/asio/lively_audio_backend.c
 
 if USE_ALSA
 lively_alsa = lively_alsa

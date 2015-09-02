@@ -25,7 +25,19 @@ static void audio_handle_pcm_open_error(
 	const char *device,
 	const char *stream,
 	int err);
-static bool audio_silence_all (lively_audio_backend_t *backend);
+
+static bool
+audio_mmap_init (
+	lively_audio_backend_t *backend,
+	enum lively_audio_stream stream,
+	snd_pcm_uframes_t frames,
+	audio_mmap_t *info);
+
+static bool
+audio_mmap_finish (
+	lively_audio_backend_t *backend,
+	enum lively_audio_stream stream,
+	audio_mmap_t *info);
 
 const char *
 lively_audio_backend_name (lively_audio_backend_t *backend) {
@@ -166,7 +178,7 @@ lively_audio_backend_disconnect (lively_audio_backend_t *backend) {
 }
 
 bool
-lively_audio_backend_start (lively_audio_backend_t *backend) {
+lively_audio_backend_start (lively_audio_backend_t *backend, lively_audio_block_t *block) {
 	int err;
 	lively_audio_config_t *config = backend->config;
 
@@ -193,7 +205,7 @@ lively_audio_backend_start (lively_audio_backend_t *backend) {
 	}
 
 	if (config->stream & AUDIO_PLAYBACK) {
-		if (!audio_silence_all (backend)) {
+		if (!lively_audio_backend_write (backend, block)) {
 			return false;
 		}
 
@@ -373,12 +385,41 @@ lively_audio_backend_wait (lively_audio_backend_t *backend) {
 }
 
 bool
-lively_audio_backend_read (lively_audio_backend_t *backend) {
+lively_audio_backend_read (
+	lively_audio_backend_t *backend,
+	lively_audio_block_t *block) {
+
 	return true;
 }
 
 bool
-lively_audio_backend_write (lively_audio_backend_t *backend) {
+lively_audio_backend_write (
+	lively_audio_backend_t *backend,
+	lively_audio_block_t *block) {
+
+	audio_mmap_t info;
+
+	unsigned int frames_length = block->avail_out;
+	unsigned int frames_start = 0;
+
+	while (frames_start < frames_length) {
+
+		unsigned int frames_left = frames_length - frames_start;
+
+		if (!audio_mmap_init (backend, AUDIO_PLAYBACK, frames_left, &info)) {
+			return false;
+		}
+
+
+
+
+		if (!audio_mmap_finish (backend, AUDIO_PLAYBACK, &info)) {
+			return false;
+		}
+
+		frames_start += info.frames;
+	}
+
 	return true;
 }
 
@@ -721,6 +762,7 @@ static bool
 audio_mmap_init (
 	lively_audio_backend_t *backend,
 	enum lively_audio_stream stream,
+	snd_pcm_uframes_t frames,
 	audio_mmap_t *info) {
 
 	int err;
@@ -737,7 +779,12 @@ audio_mmap_init (
 	if (avail < 0) {
 		log_error (backend, "Could not get available frames for mmap");
 		return false;
+	} else if (avail < frames) {
+		log_error (backend, "Frames available to us are less than we need");
+		return false;
 	}
+
+	info->frames = frames;
 
 	err = snd_pcm_mmap_begin (handle, &info->areas, &info->offset, &info->frames);
 	if (err < 0) {
@@ -747,6 +794,7 @@ audio_mmap_init (
 
 	return true;
 }
+
 
 static bool
 audio_mmap_finish (
@@ -771,27 +819,6 @@ audio_mmap_finish (
 		log_error (backend,
 			"Could not transfer %u frames as requested, transferred %u",
 			info->frames, commited);
-		return false;
-	}
-
-	return true;
-}
-
-static bool audio_silence_all (lively_audio_backend_t *backend) {
-	audio_mmap_t info;
-	lively_audio_config_t *config = backend->config;
-
-	if (!audio_mmap_init (backend, AUDIO_PLAYBACK, &info)) {
-		return false;
-	}
-
-	if (info.frames !=
-		config->frames_per_period * config->periods_per_buffer) {
-		log_error (backend, "Full buffer is not available to silence");
-		return false;
-	}
-
-	if (!audio_mmap_finish (backend, AUDIO_PLAYBACK, &info)) {
 		return false;
 	}
 
