@@ -55,6 +55,8 @@ void lively_audio_main (lively_thread_t *thread) {
 		}
 		lively_audio_backend_disconnect (backend);
 	}
+
+	lively_audio_backend_delete (&backend);
 }
 
 static void
