@@ -10,6 +10,9 @@ typedef struct lively_audio_backend lively_audio_backend_t;
 typedef void (*lively_audio_backend_logger_callback_t) (
 	void *, enum lively_log_level, const char *, ...);
 
+const char *
+lively_audio_backend_name (lively_audio_backend_t *);
+
 lively_audio_backend_t *
 lively_audio_backend_new (lively_audio_config_t *);
 

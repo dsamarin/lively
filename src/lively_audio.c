@@ -41,7 +41,9 @@ void lively_audio_main (lively_thread_t *thread) {
 	lively_audio_backend_set_logger (backend, audio_logger, thread->app);
 	
 	if (lively_audio_backend_connect (backend)) {
-		lively_app_log (thread->app, LIVELY_INFO, module, "Starting audio");
+		lively_app_log (thread->app, LIVELY_INFO, module,
+			"Starting audio (%s backend)", lively_audio_backend_name (backend));
+
 		if (lively_audio_backend_start (backend)) {
 			while (lively_audio_backend_wait (backend)) {
 				lively_audio_backend_read (backend);

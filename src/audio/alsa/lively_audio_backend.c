@@ -27,6 +27,11 @@ static void audio_handle_pcm_open_error(
 	int err);
 static bool audio_silence_all (lively_audio_backend_t *backend);
 
+const char *
+lively_audio_backend_name (lively_audio_backend_t *backend) {
+	return "alsa";
+}
+
 lively_audio_backend_t *
 lively_audio_backend_new (lively_audio_config_t *config) {
 	lively_audio_backend_t *backend = malloc (sizeof *backend);
