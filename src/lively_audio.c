@@ -44,7 +44,6 @@ void lively_audio_main (lively_thread_t *thread) {
 		lively_app_log (thread->app, LIVELY_INFO, module, "Starting audio");
 		if (lively_audio_backend_start (backend)) {
 			while (lively_audio_backend_wait (backend)) {
-				platform_sleep (1);
 				lively_audio_backend_read (backend);
 				lively_audio_backend_write (backend);
 

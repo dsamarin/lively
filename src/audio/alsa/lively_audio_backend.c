@@ -25,6 +25,7 @@ static void audio_handle_pcm_open_error(
 	const char *device,
 	const char *stream,
 	int err);
+static bool audio_silence_all (lively_audio_backend_t *backend);
 
 lively_audio_backend_t *
 lively_audio_backend_new (lively_audio_config_t *config) {
@@ -35,12 +36,17 @@ lively_audio_backend_new (lively_audio_config_t *config) {
 
 	backend->config = config;
 
-	backend->handle_playback = NULL;
-	backend->handle_capture = NULL;
+	backend->playback = NULL;
+	backend->capture = NULL;
 	backend->playback_hw_params = NULL;
 	backend->playback_sw_params = NULL;
 	backend->capture_hw_params = NULL;
 	backend->capture_sw_params = NULL;
+
+	backend->poll_timeout = 0;
+	backend->poll_fds = NULL;
+	backend->poll_fds_count_capture = 0;
+	backend->poll_fds_count_playback = 0;
 
 	backend->linked = false;
 	backend->connected = false;
@@ -87,8 +93,8 @@ bool lively_audio_backend_connect (lively_audio_backend_t *backend) {
 	 * 1. Open playback and capture handles
 	 */
 
-	snd_pcm_t *handle_capture = backend->handle_capture;
-	snd_pcm_t *handle_playback = backend->handle_playback;
+	snd_pcm_t *handle_capture = backend->capture;
+	snd_pcm_t *handle_playback = backend->playback;
 
 	if (config->stream & AUDIO_CAPTURE) {
 		err = snd_pcm_open (&handle_capture, device,
@@ -97,9 +103,9 @@ bool lively_audio_backend_connect (lively_audio_backend_t *backend) {
 			audio_handle_pcm_open_error (backend, device, "capture", err);
 			return false;
 		}
-		backend->handle_capture = handle_capture;
+		backend->capture = handle_capture;
 		
-		err = snd_pcm_nonblock (backend->handle_capture, 0);
+		err = snd_pcm_nonblock (backend->capture, 0);
 		if (err < 0) {
 			log_error (backend, "Could not capture device to blocking mode");
 			return false;
@@ -113,9 +119,9 @@ bool lively_audio_backend_connect (lively_audio_backend_t *backend) {
 			audio_handle_pcm_open_error (backend, device, "playback", err);
 			return false;
 		}
-		backend->handle_playback = handle_playback;
+		backend->playback = handle_playback;
 		
-		err = snd_pcm_nonblock (backend->handle_playback, 0);
+		err = snd_pcm_nonblock (backend->playback, 0);
 		if (err < 0) {
 			log_error (backend, "Could not playback device to blocking mode");
 			return false;
@@ -148,8 +154,8 @@ lively_audio_backend_disconnect (lively_audio_backend_t *backend) {
 	if (backend->playback_hw_params)
 		snd_pcm_hw_params_free (backend->playback_hw_params);
 
-	if (backend->handle_playback) snd_pcm_close (backend->handle_playback);
-	if (backend->handle_capture) snd_pcm_close (backend->handle_capture);
+	if (backend->playback) snd_pcm_close (backend->playback);
+	if (backend->capture) snd_pcm_close (backend->capture);
 
 	return true;
 }
@@ -160,18 +166,52 @@ lively_audio_backend_start (lively_audio_backend_t *backend) {
 	lively_audio_config_t *config = backend->config;
 
 	if (config->stream & AUDIO_CAPTURE) {
-		err = snd_pcm_prepare (backend->handle_capture);
+		err = snd_pcm_prepare (backend->capture);
 		if (err < 0) {
 			log_error (backend, "Could not prepare capture stream");
 			return false;
-		}
+		}	
+		backend->poll_fds_count_capture =
+			snd_pcm_poll_descriptors_count (backend->capture);
 	}
 
 	if (config->stream & AUDIO_PLAYBACK) {
 		if (!backend->linked || !(config->stream & AUDIO_CAPTURE)) {
-			err = snd_pcm_prepare (backend->handle_playback);
+			err = snd_pcm_prepare (backend->playback);
 			if (err < 0) {
 				log_error (backend, "Could not prepare playback stream");
+				return false;
+			}
+		}
+		backend->poll_fds_count_playback =
+			snd_pcm_poll_descriptors_count (backend->playback);
+	}
+
+	unsigned int poll_fds_count =
+		backend->poll_fds_count_capture + backend->poll_fds_count_playback;
+	backend->poll_fds = malloc (poll_fds_count * (sizeof *backend->poll_fds));
+	if (!backend->poll_fds) {
+		log_error (backend, "Could not allocate memory for audio poll descriptors");
+		return false;
+	}
+
+	if (config->stream & AUDIO_PLAYBACK) {
+		if (!audio_silence_all (backend)) {
+			return false;
+		}
+
+		err = snd_pcm_start (backend->playback);
+		if (err < 0) {
+			log_error (backend, "Could not start playback stream");
+			return false;
+		}
+	}
+
+	if (config->stream & AUDIO_CAPTURE) {
+		if (!backend->linked || !(config->stream & AUDIO_PLAYBACK)) {
+			err = snd_pcm_start (backend->capture);
+			if (err < 0) {
+				log_error (backend, "Could not start capture stream");
 				return false;
 			}
 		}
@@ -182,11 +222,148 @@ lively_audio_backend_start (lively_audio_backend_t *backend) {
 
 bool
 lively_audio_backend_stop (lively_audio_backend_t *backend) {
+	int err;
+	lively_audio_config_t *config = backend->config;
+
+	if (config->stream & AUDIO_CAPTURE) {
+		err = snd_pcm_drop (backend->capture);
+		if (err < 0) {
+			log_error (backend, "Could not drop capture stream");
+			return false;
+		}
+	}
+	if (config->stream & AUDIO_PLAYBACK) {
+		if (!backend->linked || !(config->stream & AUDIO_CAPTURE)) {
+			err = snd_pcm_drop (backend->playback);
+			if (err < 0) {
+				log_error (backend, "Could not drop playback stream");
+				return false;
+			}
+		}
+	}
+
+	if (backend->poll_fds) {
+		free (backend->poll_fds);
+		backend->poll_fds = NULL;
+	}
+
 	return true;
 }
 
 bool
 lively_audio_backend_wait (lively_audio_backend_t *backend) {
+	int err;
+	bool xrun = false;
+
+	lively_audio_config_t *config = backend->config;
+	bool capture_wait = config->stream & AUDIO_CAPTURE;
+	bool playback_wait = config->stream & AUDIO_PLAYBACK;
+
+	snd_pcm_sframes_t avail = 0;
+
+	while (capture_wait || playback_wait) {
+		int poll_fds_count = 0;
+		struct pollfd *poll_fds_playback;
+		unsigned short revents;
+
+		// Load polling structure with descriptors
+		if (capture_wait) {
+			poll_fds_count += snd_pcm_poll_descriptors (
+				backend->capture,
+				backend->poll_fds,
+				backend->poll_fds_count_capture);
+		}
+		if (playback_wait) {
+			poll_fds_playback = &backend->poll_fds[poll_fds_count];
+			poll_fds_count += snd_pcm_poll_descriptors (
+				backend->playback,
+				poll_fds_playback,
+				backend->poll_fds_count_playback);
+		}
+		for (int i = 0; i < poll_fds_count; i++) {
+			backend->poll_fds[i].events |= POLLERR;
+		}
+
+		// Perform poll
+		err = poll (backend->poll_fds, poll_fds_count, backend->poll_timeout);
+		if (err == 0) {
+			log_error (backend, "Timed out while polling descriptors");
+			return false;
+		} else if (err == -1) {
+			log_error (backend, "Failed to poll descriptors");
+			return false;
+		}
+
+		if (capture_wait) {
+			err = snd_pcm_poll_descriptors_revents (
+				backend->capture,
+				backend->poll_fds,
+				backend->poll_fds_count_capture,
+				&revents);
+			if (err < 0) {
+				log_error (backend,
+					"Could not get returned events from capture descriptors");
+				return false;
+			}
+
+			if (revents & POLLERR) {
+				xrun = true;
+			}
+			if (revents & POLLIN) {
+				capture_wait = false;
+			}
+		}
+		if (playback_wait) {
+			err = snd_pcm_poll_descriptors_revents (
+				backend->playback,
+				poll_fds_playback,
+				backend->poll_fds_count_playback,
+				&revents);
+			if (err < 0) {
+				log_error (backend,
+					"Could not get returned events from playback descriptors");
+				return false;
+			}
+
+			if (revents & POLLERR) {
+				xrun = true;
+			}
+			if (revents & POLLOUT) {
+				playback_wait = false;
+			}
+		}
+	}
+
+	if (config->stream & AUDIO_CAPTURE) {
+		snd_pcm_sframes_t avail_capture = snd_pcm_avail_update (
+			backend->capture);
+		if (avail_capture == -EPIPE) {
+			xrun = true;
+		} else if (avail_capture < 0) {
+			log_error (backend, "Unknown error finding available frames");
+			return false;
+		}
+		avail = avail_capture;
+	}
+
+	if (config->stream & AUDIO_PLAYBACK) {
+		snd_pcm_sframes_t avail_playback = snd_pcm_avail_update (
+			backend->playback);
+		if (avail_playback == -EPIPE) {
+			xrun = true;
+		} else if (avail_playback < 0) {
+			log_error (backend, "Unknown error finding available frames");
+			return false;
+		}
+		if (avail <= 0 || avail > avail_playback) {
+			avail = avail_playback;
+		}
+	}
+
+	if (xrun) {
+		// TODO: Recover
+	}
+
 	return true;
 }
 
@@ -274,12 +451,15 @@ static bool audio_configure (lively_audio_backend_t *backend) {
 			return false;
 		}
 
-		if (snd_pcm_link (backend->handle_playback, backend->handle_capture)) {
+		if (snd_pcm_link (backend->playback, backend->capture)) {
 			backend->linked = false;
 		} else {
 			backend->linked = true;
 		}
 	}
+
+	backend->poll_timeout = (int) (
+		1500000.0f * config->frames_per_period / config->frames_per_second);
 
 	return true;
 }
@@ -302,14 +482,14 @@ static bool audio_configure_stream (
 
 	if (stream == AUDIO_CAPTURE) {
 		name = "Capture";
-		handle = backend->handle_capture;
+		handle = backend->capture;
 		hw = backend->capture_hw_params;
 		sw = backend->capture_sw_params;
 		channels = &config->channels_in;
 		periods_per_buffer = &config->periods_per_buffer_in;
 	} else if (stream == AUDIO_PLAYBACK) {
 		name = "Playback";
-		handle = backend->handle_playback;
+		handle = backend->playback;
 		hw = backend->playback_hw_params;
 		sw = backend->playback_sw_params;
 		channels = &config->channels_out;
@@ -532,3 +712,83 @@ static bool audio_configure_stream (
 	return true;
 }
 
+static bool
+audio_mmap_init (
+	lively_audio_backend_t *backend,
+	enum lively_audio_stream stream,
+	audio_mmap_t *info) {
+
+	int err;
+	snd_pcm_t *handle = NULL;
+	snd_pcm_sframes_t avail = 0;
+
+	if (stream == AUDIO_CAPTURE) {
+		handle = backend->capture;
+	} else if (stream == AUDIO_PLAYBACK) {
+		handle = backend->playback;
+	}
+
+	avail = snd_pcm_avail_update (handle);
+	if (avail < 0) {
+		log_error (backend, "Could not get available frames for mmap");
+		return false;
+	}
+
+	err = snd_pcm_mmap_begin (handle, &info->areas, &info->offset, &info->frames);
+	if (err < 0) {
+		log_error (backend, "Could not begin mmap access");
+		return false;
+	}
+
+	return true;
+}
+
+static bool
+audio_mmap_finish (
+	lively_audio_backend_t *backend,
+	enum lively_audio_stream stream,
+	audio_mmap_t *info) {
+
+	snd_pcm_t *handle = NULL;
+	snd_pcm_sframes_t commited = 0;
+
+	if (stream == AUDIO_CAPTURE) {
+		handle = backend->capture;
+	} else {
+		handle = backend->playback;
+	}
+
+	commited = snd_pcm_mmap_commit (handle, info->offset, info->frames);
+	if (commited < 0) {
+		log_error (backend, "Could not finalize mmap access");
+		return false;
+	} else if (commited != info->frames) {
+		log_error (backend,
+			"Could not transfer %u frames as requested, transferred %u",
+			info->frames, commited);
+		return false;
+	}
+
+	return true;
+}
+
+static bool audio_silence_all (lively_audio_backend_t *backend) {
+	audio_mmap_t info;
+	lively_audio_config_t *config = backend->config;
+
+	if (!audio_mmap_init (backend, AUDIO_PLAYBACK, &info)) {
+		return false;
+	}
+
+	if (info.frames !=
+		config->frames_per_period * config->periods_per_buffer) {
+		log_error (backend, "Full buffer is not available to silence");
+		return false;
+	}
+
+	if (!audio_mmap_finish (backend, AUDIO_PLAYBACK, &info)) {
+		return false;
+	}
+
+	return true;
+}
