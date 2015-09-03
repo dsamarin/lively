@@ -11,6 +11,8 @@ AM_INIT_AUTOMAKE([subdir-objects])
 
 AC_CONFIG_SRCDIR([src/main.c])
 
+CFLAGS="$CFLAGS"
+
 # Specify options
 AC_ARG_WITH([alsa],
 	AS_HELP_STRING([--with-alsa], [Enable support for ALSA]),
