@@ -1,20 +1,11 @@
-# autotools
-Makefile
+# Build files
 Makefile.in
-Doxyfile
-configure
-.deps/
-.dirstamp
-aclocal.m4
-autom4te.cache/
-compile
-config.*
-depcomp
-install-sh
-missing
-stamp-h1
-
-
-# object files/executables
-*.o
-/src/lively_*
+/aclocal.m4
+/autom4te.cache/
+/build/
+/compile
+/config.*
+/configure
+/depcomp
+/install-sh
+/missing
