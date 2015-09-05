@@ -562,6 +562,7 @@ static bool audio_configure_stream (
 		SND_PCM_ACCESS_MMAP_COMPLEX
 	};
 
+	size_t try_formats_index = 0;
 	static const struct {
 		snd_pcm_format_t pcm_format;
 		const char *id;
@@ -621,9 +622,7 @@ static bool audio_configure_stream (
 			err = snd_pcm_hw_params_set_format (handle, hw, 
 				try_formats[i].pcm_format);
 			if (err == 0) {
-				log_info (backend,
-					"%s stream: Setting format to %s",
-					name, try_formats[i].id);
+				try_formats_index = i;
 				found = true;
 				break;
 			}
@@ -649,9 +648,6 @@ static bool audio_configure_stream (
 			"%s stream: Setting sample rate to %u Hz instead of %u Hz",
 			name, frames_per_second, config->frames_per_second);
 		config->frames_per_second = frames_per_second;
-	} else {
-		log_info (backend,
-			"%s stream: Setting sample rate to %u Hz", name, frames_per_second);
 	}
 
 	if (*channels == 0) {
@@ -702,8 +698,6 @@ static bool audio_configure_stream (
 			name, *periods_per_buffer, config->periods_per_buffer);
 		return false;
 	}
-	log_info (backend,
-		"%s stream: Setting periods to %u", name, *periods_per_buffer);
 
 	unsigned int buffer_size = config->frames_per_period * (*periods_per_buffer);
 	err = snd_pcm_hw_params_set_buffer_size (handle, hw, buffer_size);
@@ -719,6 +713,10 @@ static bool audio_configure_stream (
 			"%s stream: Could not set hardware parameters", name);
 		return false;
 	}
+
+	log_info (backend,
+		"%s: %u Hz, %s, %u channels",
+		name, frames_per_second, try_formats[try_formats_index].id, *channels);
 
 	snd_pcm_sw_params_current (handle, sw);
 	

@@ -19,7 +19,6 @@ audio_logger (void *user, enum lively_log_level level, const char *fmt, ...);
 * @param thread The Lively Thread
 */
 void lively_audio_main (lively_thread_t *thread) {
-	float latency;
 	lively_audio_config_t config;
 	lively_audio_backend_t *backend;
 	lively_audio_block_t block;
@@ -28,9 +27,6 @@ void lively_audio_main (lively_thread_t *thread) {
 		return;
 
 	lively_audio_config_init (&config);
-	latency = lively_audio_config_get_latency (&config);
-	lively_app_log (thread->app, LIVELY_INFO, module,
-		"Audio is configured for latency of %.2fms", latency * 1000.0);
 
 	backend = lively_audio_backend_new (&config);
 	if (!backend) {
@@ -46,6 +42,9 @@ void lively_audio_main (lively_thread_t *thread) {
 	lively_audio_backend_set_logger (backend, audio_logger, thread->app);
 	
 	if (lively_audio_backend_connect (backend)) {
+		float latency = lively_audio_config_get_latency (&config);
+		lively_app_log (thread->app, LIVELY_INFO, module,
+			"Audio is configured for latency of %.2fms", latency * 1000.0);
 
 		if (!lively_audio_block_init (&block, &config)) {
 			lively_app_log (thread->app, LIVELY_ERROR, module,
