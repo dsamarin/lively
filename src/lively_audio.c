@@ -55,8 +55,14 @@ void lively_audio_main (lively_thread_t *thread) {
 			lively_audio_block_silence_output (&block);
 			if (lively_audio_backend_start (backend, &block)) {
 				while (lively_audio_backend_wait (backend)) {
-					lively_audio_backend_read (backend, &block);
-					lively_audio_backend_write (backend, &block);
+					if (!lively_audio_backend_read (backend, &block)) {
+						lively_app_log (thread->app, LIVELY_ERROR, module,
+							"Read failed");
+					}
+					if (!lively_audio_backend_write (backend, &block)) {
+						lively_app_log (thread->app, LIVELY_ERROR, module,
+							"Write failed");
+					}
 
 					if (lively_thread_get_state (thread) == THREAD_STOP)
 						break;

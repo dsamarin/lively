@@ -9,6 +9,8 @@
 #undef ALSA_PCM_NEW_SW_PARAMS_API
 #undef _POSIX_C_SOURCE
 
+#include "audio_format.h"
+
 #include "../../lively_audio_backend.h"
 
 typedef struct lively_audio_backend {
@@ -20,6 +22,9 @@ typedef struct lively_audio_backend {
 	snd_pcm_sw_params_t *playback_sw_params;
 	snd_pcm_hw_params_t *capture_hw_params;
 	snd_pcm_sw_params_t *capture_sw_params;
+
+	sample_read_func_t sample_read;
+	sample_write_func_t sample_write;
 
 	int poll_timeout;
 	struct pollfd* poll_fds;

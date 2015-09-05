@@ -5,6 +5,7 @@
 #include "../../lively_audio_backend.h"
 #include "../../lively_audio_config.h"
 
+#include "audio_format.h"
 #include "lively_audio_backend_alsa.h"
 
 #define log(backend, type, ...) do { \
@@ -16,6 +17,7 @@
 #define log_info(backend, ...) log(backend, LIVELY_INFO, __VA_ARGS__)
 #define log_warn(backend, ...) log(backend, LIVELY_WARN, __VA_ARGS__)
 
+static bool audio_configure_io (lively_audio_backend_t *backend);
 static bool audio_configure (lively_audio_backend_t *backend);
 static bool audio_configure_stream (
 	lively_audio_backend_t *backend,
@@ -410,14 +412,20 @@ lively_audio_backend_write (
 			return false;
 		}
 
-
-
+		for (unsigned int i = frames_start; i < frames_length; i++) {
+			//backend->
+		}
 
 		if (!audio_mmap_finish (backend, AUDIO_PLAYBACK, &info)) {
 			return false;
 		}
 
 		frames_start += info.frames;
+	}
+
+	// Channels have been written, mark all as not ready
+	for (unsigned int i = 0; i < block->num_out; i++) {
+		block->out[i].ready = false;
 	}
 
 	return true;
@@ -502,6 +510,10 @@ static bool audio_configure (lively_audio_backend_t *backend) {
 		} else {
 			backend->linked = true;
 		}
+	}
+
+	if (!audio_configure_io (backend)) {
+		return false;
 	}
 
 	backend->poll_timeout = (int) (
@@ -752,6 +764,46 @@ static bool audio_configure_stream (
 	if (err < 0) {
 		log_error (backend,
 			"%s stream: Could not set software parameters", name);
+		return false;
+	}
+
+	return true;
+}
+
+static bool
+audio_configure_io (lively_audio_backend_t *backend) {
+	lively_audio_config_t *config = backend->config;
+
+	snd_pcm_format_t read = SND_PCM_FORMAT_UNKNOWN;
+	snd_pcm_format_t write = SND_PCM_FORMAT_UNKNOWN;
+
+	backend->sample_read = NULL;
+	backend->sample_write = NULL;
+
+	if (config->stream & AUDIO_CAPTURE) {
+		snd_pcm_hw_params_get_format (backend->capture_hw_params, &read);
+	}
+	if (config->stream & AUDIO_PLAYBACK) {
+		snd_pcm_hw_params_get_format (backend->playback_hw_params, &write);
+	}
+
+	switch (read) {
+	case SND_PCM_FORMAT_FLOAT_LE: backend->sample_read = sample_read_float_le; break;
+	case SND_PCM_FORMAT_S32_LE: backend->sample_read = sample_read_s32_le; break;
+	case SND_PCM_FORMAT_S16_LE: backend->sample_read = sample_read_s16_le; break;
+	case SND_PCM_FORMAT_UNKNOWN: break;
+	default:
+		log_error (backend, "Unknown capture sample format (%d)", read);
+		return false;
+	}
+
+	switch (write) {
+	case SND_PCM_FORMAT_FLOAT_LE: backend->sample_write = sample_write_float_le; break;
+	case SND_PCM_FORMAT_S32_LE: backend->sample_write = sample_write_s32_le; break;
+	case SND_PCM_FORMAT_S16_LE: backend->sample_write = sample_write_s16_le; break;
+	case SND_PCM_FORMAT_UNKNOWN: break;
+	default:
+		log_error (backend, "Unknown playback sample format (%d)", write);
 		return false;
 	}
 

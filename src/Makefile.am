@@ -30,6 +30,8 @@ audio_sources = \
 
 alsa_sources = \
 	$(audio_sources) \
+	audio/alsa/audio_format.c \
+	audio/alsa/audio_format.h \
 	audio/alsa/lively_audio_backend.c
 
 jack_sources = \
