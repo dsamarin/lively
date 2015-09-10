@@ -57,10 +57,12 @@ void lively_audio_main (lively_thread_t *thread) {
 					if (!lively_audio_backend_read (backend, &block)) {
 						lively_app_log (thread->app, LIVELY_ERROR, module,
 							"Read failed");
+						break;
 					}
 					if (!lively_audio_backend_write (backend, &block)) {
 						lively_app_log (thread->app, LIVELY_ERROR, module,
 							"Write failed");
+						break;
 					}
 
 					if (lively_thread_get_state (thread) == THREAD_STOP)

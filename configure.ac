@@ -75,6 +75,9 @@ AC_PROG_RANLIB
 
 AC_C_BIGENDIAN
 
+# Libraries
+AC_CHECK_LIB([m], [lrintf])
+
 # Doxygen setup
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])

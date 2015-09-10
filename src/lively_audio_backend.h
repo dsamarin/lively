@@ -16,6 +16,8 @@ typedef struct lively_audio_block {
 	unsigned int avail_in;
 	unsigned int avail_out;
 
+	float *silence;
+
 	unsigned int num_in;
 	unsigned int num_out;
 

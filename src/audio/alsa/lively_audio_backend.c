@@ -412,8 +412,20 @@ lively_audio_backend_write (
 			return false;
 		}
 
-		for (unsigned int i = frames_start; i < frames_length; i++) {
-			//backend->
+		for (unsigned int channel = 0; channel < block->num_out; channel++) {
+			const snd_pcm_channel_area_t *area = &(info.areas[channel]);
+			char *data_out = (char *) area->addr + (area->first + info.offset * area->step) / 8;
+			float *data_in = block->out[channel].data;
+
+			if (!block->out[channel].ready) {
+				data_in = block->silence;
+			}
+
+			backend->sample_write (
+				data_out,
+				data_in,
+				frames_left,
+				area->step / 8);
 		}
 
 		if (!audio_mmap_finish (backend, AUDIO_PLAYBACK, &info)) {
@@ -827,7 +839,7 @@ audio_mmap_init (
 
 	avail = snd_pcm_avail_update (handle);
 	if (avail < 0) {
-		log_error (backend, "Could not get available frames for mmap");
+		log_error (backend, "Could not get available frames for mmap: %s", snd_strerror (avail));
 		return false;
 	} else if (avail < frames) {
 		log_error (backend, "Frames available to us are less than we need");

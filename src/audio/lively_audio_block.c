@@ -11,7 +11,7 @@ lively_audio_block_init (
 
 	block->frames = config->frames_per_period;
 	block->avail_in = 0;
-	block->avail_out = 0;
+	block->avail_out = block->frames;
 	block->num_in = config->channels_in;
 	block->num_out = config->channels_out;
 
@@ -50,19 +50,24 @@ lively_audio_block_init (
 		}
 	}
 
+	block->silence = malloc (block->frames * sizeof (float));
+	if (!block->silence) {
+		return false;
+	}
+
+	for (i = 0; i < block->frames; i++) {
+		block->silence[i] = 0.0f;
+	}
+
 	return true;
 }
 
 void
 lively_audio_block_silence_output (lively_audio_block_t *block) {
-	unsigned int i, j;
+	unsigned int i;
 
 	for (i = 0; i < block->num_out; i++) {
-		float *buffer = block->out[i].data;
-		for (j = 0; j < block->frames; j++) {
-			buffer[j] = 0.0;
-		}
-		block->out[i].ready = true;
+		block->out[i].ready = false;
 	}
 }
 
@@ -79,12 +84,17 @@ lively_audio_block_destroy (lively_audio_block_t *block) {
 		block->out[i].data = NULL;
 	}
 
-	if (!block->in) {
+	if (block->in) {
 		free (block->in);
 		block->in = NULL;
 	}
-	if (!block->out) {
+	if (block->out) {
 		free (block->out);
 		block->out = NULL;
+	}
+
+	if (block->silence) {
+		free (block->silence);
+		block->silence = NULL;
 	}
 }
