@@ -41,6 +41,9 @@ audio_mmap_finish (
 	enum lively_audio_stream stream,
 	audio_mmap_t *info);
 
+static bool
+audio_silence (lively_audio_backend_t *backend);
+
 const char *
 lively_audio_backend_name (lively_audio_backend_t *backend) {
 	return "alsa";
@@ -207,7 +210,7 @@ lively_audio_backend_start (lively_audio_backend_t *backend, lively_audio_block_
 	}
 
 	if (config->stream & AUDIO_PLAYBACK) {
-		if (!lively_audio_backend_write (backend, block)) {
+		if (!audio_silence (backend)) {
 			return false;
 		}
 
@@ -380,6 +383,7 @@ lively_audio_backend_wait (lively_audio_backend_t *backend) {
 	}
 
 	if (xrun) {
+		log_error (backend, "Detected xrun");
 		// TODO: Recover
 	}
 
@@ -883,6 +887,52 @@ audio_mmap_finish (
 			info->frames, commited);
 		return false;
 	}
+
+	return true;
+}
+
+static bool
+audio_silence (lively_audio_backend_t *backend) {
+	int err;
+	lively_audio_config_t *config = backend->config;
+
+	snd_pcm_uframes_t buffer_size = config->frames_per_period * config->periods_per_buffer_out;
+
+	snd_pcm_sframes_t avail = snd_pcm_avail_update (backend->playback);
+	if (avail < 0) {
+		log_error (backend, "Could not get available frames for mmap");
+		return false;
+	} else if (avail < buffer_size) {
+		log_error (backend, "Not enough frames available to silence");
+		return false;
+	}
+
+	snd_pcm_uframes_t written = 0;
+	while (written < buffer_size) {
+		const snd_pcm_channel_area_t *areas;
+		snd_pcm_sframes_t transferred;
+		snd_pcm_uframes_t offset, frames;
+
+		err = snd_pcm_mmap_begin (backend->playback, &areas, &offset, &frames);
+		if (err < 0) {
+			log_error (backend, "Could not begin mmap access");
+			return false;
+		}
+
+		transferred = snd_pcm_mmap_commit (backend->playback, offset, frames);
+		if (transferred < 0) {
+			log_error (backend, "Could not commit mmap access");
+			return false;
+		} else if (transferred != frames) {
+			log_error (backend, "Did not commit all of requested frames (%d of %d)",
+				transferred, frames);
+			return false;
+		}
+
+		written += frames;
+	}
+
+
 
 	return true;
 }
