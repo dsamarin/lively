@@ -28,6 +28,8 @@ bool lively_thread_init (
 lively_thread_state_t lively_thread_get_state (lively_thread_t *);
 void lively_thread_set_state (lively_thread_t *, lively_thread_state_t);
 
+bool lively_thread_acquire_realtime (lively_thread_t *);
+
 void lively_thread_join (lively_thread_t *);
 
 void lively_thread_join_multiple (lively_thread_t *start, ...);

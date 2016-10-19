@@ -28,6 +28,11 @@ void lively_audio_main (lively_thread_t *thread) {
 
 	lively_audio_config_init (&config);
 
+	if (!lively_thread_acquire_realtime (thread)) {
+		lively_app_log (thread->app, LIVELY_WARN, module,
+			"Permission denied attempting to acquire real time privileges");
+	}
+
 	backend = lively_audio_backend_new (&config);
 	if (!backend) {
 		lively_app_log (thread->app, LIVELY_FATAL, module,

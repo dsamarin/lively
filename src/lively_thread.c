@@ -65,6 +65,21 @@ lively_thread_set_state (lively_thread_t *thread, lively_thread_state_t state) {
 	thread->state = state;
 }
 
+bool
+lively_thread_acquire_realtime (lively_thread_t *thread) {
+	int err;
+	struct sched_param param;
+
+	param.sched_priority = 10;
+
+	err = pthread_setschedparam (thread->pthread, SCHED_FIFO, &param);
+	if (err) {
+		return false;
+	}
+
+	return true;
+}
+
 /**
 * Joins a Lively Thread.
 *
